@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { AddToCalendar } from "../components/AddToCalendar";
 import { PaymentBadge, StatusBadge } from "../components/badges";
 import { SlotPicker } from "../components/SlotPicker";
 import { Alert, Badge, Button, buttonClasses, Card, Empty, Loading, Modal, PageHeader, Segmented, Textarea, useToast } from "../components/ui";
@@ -73,7 +74,11 @@ export default function MyBookings() {
                     {b.parent_note && <p className="mt-2 text-sm text-muted">Your note: {b.parent_note}</p>}
                   </div>
                   {tab === "upcoming" && (
-                    <div className="flex shrink-0 gap-2">
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      {b.status === "booked" && (
+                        <AddToCalendar booking={b} sessionName={b.session_type?.name ?? "Training session"}
+                          playerName={b.player?.first_name ?? ""} tz={tz} size="sm" />
+                      )}
                       {b.status === "booked" && (
                         <Button variant="secondary" size="sm" disabled={inside} title={inside ? `Can't reschedule within ${windowHours} hours` : undefined} onClick={() => setMoving(b)}>
                           Reschedule

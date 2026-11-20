@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { AddToCalendar } from "../components/AddToCalendar";
 import { PlayerFormModal } from "../components/PlayerForm";
 import { PageHero } from "../components/Layout";
 import { PublicBook } from "../components/PublicBook";
@@ -154,6 +155,7 @@ function BookingFlow() {
           <p className="mt-1 font-semibold text-fg">{fmtLongDateTime(booked.start_time, tz)}</p>
           <p className="mt-3 text-sm text-muted">A confirmation email is on its way. Paid with a package credit.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
+            <AddToCalendar booking={booked} sessionName={type.name} playerName={player.first_name} tz={tz} />
             <Link to="/bookings" className={buttonClasses()}>View my bookings</Link>
             <Button variant="secondary" onClick={() => { setBooked(null); setSlot(null); setNote(""); setRefreshKey((k) => k + 1); }}>Book another</Button>
           </div>

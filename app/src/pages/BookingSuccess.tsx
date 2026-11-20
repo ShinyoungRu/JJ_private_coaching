@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import { AddToCalendar } from "../components/AddToCalendar";
 import { buttonClasses, Card, Spinner, SuccessMark } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { fmtLongDateTime } from "../lib/format";
@@ -13,7 +14,7 @@ export default function BookingSuccess() {
   const sessionId = params.get("session_id");
   const { tz } = useAuth();
   const [state, setState] = useState<State>(sessionId ? "checking" : "missing");
-  const [detail, setDetail] = useState<{ start_time: string; player: string; type: string } | null>(null);
+  const [detail, setDetail] = useState<{ id: string; start_time: string; end_time: string; player: string; type: string } | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -23,12 +24,15 @@ export default function BookingSuccess() {
       tries++;
       const { data } = await supabase
         .from("bookings")
-        .select("status, payment_status, start_time, player:players(first_name), session_type:session_types(name)")
+        .select("id, status, payment_status, start_time, end_time, player:players(first_name), session_type:session_types(name)")
         .eq("stripe_checkout_session_id", sessionId)
         .maybeSingle();
       if (stop) return;
       if (data && data.status === "booked" && data.payment_status === "paid") {
-        setDetail({ start_time: data.start_time, player: data.player?.first_name ?? "", type: data.session_type?.name ?? "" });
+        setDetail({
+          id: data.id, start_time: data.start_time, end_time: data.end_time,
+          player: data.player?.first_name ?? "", type: data.session_type?.name ?? "",
+        });
         setState("confirmed");
         return;
       }
@@ -71,6 +75,9 @@ export default function BookingSuccess() {
           </>
         )}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {state === "confirmed" && detail && (
+            <AddToCalendar booking={detail} sessionName={detail.type} playerName={detail.player} tz={tz} />
+          )}
           <Link to="/bookings" className={buttonClasses()}>My bookings</Link>
           <Link to="/book" className={buttonClasses("secondary")}>Book another</Link>
         </div>
