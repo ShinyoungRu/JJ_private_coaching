@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
+import { PageHero } from "../components/Layout";
 import { Alert, Badge, Button, buttonClasses, Card, Loading, PageHeader, SectionTitle } from "../components/ui";
 import { errorMessage, invoke, publicGet, unwrap } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -19,7 +20,7 @@ interface PackageView {
 }
 
 export default function Packages() {
-  const { session, tz, settings } = useAuth();
+  const { session, tz, settings, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [buying, setBuying] = useState<string | null>(null);
@@ -77,9 +78,15 @@ export default function Packages() {
   const active = (credits.data ?? []).filter((c) => c.sessions_remaining > 0 && (!c.expires_at || new Date(c.expires_at).getTime() > now));
   const currency = settings?.currency ?? "usd";
 
+  // Wait for auth so signed-in clients never flash (and download) the logged-out photo hero.
+  if (authLoading) return <Loading />;
+  const subtitle = "Buy sessions in advance and save. Credits are used automatically when you book.";
+
   return (
     <>
-      <PageHeader title="Session packages" subtitle="Buy sessions in advance and save. Credits are used automatically when you book." />
+      {session
+        ? <PageHeader title="Session packages" subtitle={subtitle} />
+        : <PageHero title="Training Packages" subtitle={subtitle} />}
       {notice && <Alert tone={notice.tone} className="mb-6">{notice.text}</Alert>}
       {error && <Alert tone="error" className="mb-6">{error}</Alert>}
 
@@ -90,10 +97,10 @@ export default function Packages() {
             {active.map((c) => (
               <Card key={c.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="font-semibold text-white">{c.label}</div>
+                  <div className="font-semibold text-fg">{c.label}</div>
                   <Badge tone="blue">{c.sessions_remaining} left</Badge>
                 </div>
-                <div className="mt-1 text-sm text-gray-400">
+                <div className="mt-1 text-sm text-muted">
                   {c.sessions_remaining} of {c.sessions_total} remaining{c.expires_at ? ` · use by ${fmtDate(c.expires_at, tz)}` : ""}
                 </div>
               </Card>
@@ -109,16 +116,16 @@ export default function Packages() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {(packages.data ?? []).map((p) => (
               <Card key={p.id} className="flex flex-col">
-                <h3 className="text-xl font-bold text-white">{p.name}</h3>
-                {p.session_type_name && <div className="mt-1 text-sm text-brand-soft">{p.session_type_name}</div>}
+                <h3 className="text-xl font-bold text-fg">{p.name}</h3>
+                {p.session_type_name && <div className="mt-1 text-sm text-brand">{p.session_type_name}</div>}
                 <div className="mt-4 flex items-baseline gap-2">
-                  <span className="text-4xl font-extrabold text-white">{fmtMoney(p.price_cents, currency)}</span>
+                  <span className="text-4xl font-extrabold text-fg">{fmtMoney(p.price_cents, currency)}</span>
                 </div>
-                <div className="mt-1 text-sm text-gray-400">
+                <div className="mt-1 text-sm text-muted">
                   {p.session_count} sessions · {fmtMoney(Math.round(p.price_cents / p.session_count), currency)} each
                 </div>
-                {p.description && <p className="mt-3 text-sm text-gray-300">{p.description}</p>}
-                {p.validity_days && <p className="mt-2 text-xs text-gray-500">Valid for {p.validity_days} days after purchase.</p>}
+                {p.description && <p className="mt-3 text-sm text-fg-2">{p.description}</p>}
+                {p.validity_days && <p className="mt-2 text-xs text-subtle">Valid for {p.validity_days} days after purchase.</p>}
                 <div className="mt-auto pt-6">
                   <Button className="w-full" loading={buying === p.id} disabled={!!buying} onClick={() => buy(p.id)}>
                     {session ? "Buy package" : "Sign up to buy"}

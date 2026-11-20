@@ -23,7 +23,7 @@ export function RequireCoach({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** "/" -> coach dashboard, parent bookings, or login. */
+/** "/" -> coach dashboard, client bookings, or the public booking page. */
 export function HomeRedirect() {
   const { session, isCoach, loading, profile } = useAuth();
   if (loading || (session && !profile)) return <Loading />;

@@ -36,11 +36,11 @@ export default function Drills() {
           {drills.data!.map((d) => (
             <Card key={d.id} className="flex flex-col">
               <div className="flex items-start justify-between gap-2">
-                <h2 className="font-semibold text-white">{d.title}</h2>
+                <h2 className="font-semibold text-fg">{d.title}</h2>
                 {d.skill_tag && <Badge tone="blue">{d.skill_tag}</Badge>}
               </div>
-              {d.description && <p className="mt-1.5 line-clamp-3 text-sm text-gray-400">{d.description}</p>}
-              <div className="mt-2 text-xs text-gray-500">
+              {d.description && <p className="mt-1.5 line-clamp-3 text-sm text-muted">{d.description}</p>}
+              <div className="mt-2 text-xs text-subtle">
                 {d.video_path ? "🎬 Uploaded video" : d.external_url ? "🔗 Video link" : "No video"} · assigned to {d.player_drills.length}
               </div>
               <div className="mt-auto flex flex-wrap gap-2 pt-4">
@@ -164,7 +164,7 @@ function AssignModal({ drill, onClose, onSaved }: { drill: DrillRow | null; onCl
                 key={p.id}
                 checked={selected.has(p.id)}
                 onChange={(e) => setSelected((s) => { const n = new Set(s); e.target.checked ? n.add(p.id) : n.delete(p.id); return n; })}
-                label={<><span className="font-semibold">{p.first_name}</span> <span className="text-gray-500">{p.age_group} · {p.parent?.full_name}</span></>}
+                label={<><span className="font-semibold">{p.first_name}</span> <span className="text-subtle">{p.age_group} · {p.parent?.full_name}</span></>}
               />
             ))}
           </div>

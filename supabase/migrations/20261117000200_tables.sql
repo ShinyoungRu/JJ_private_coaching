@@ -10,7 +10,9 @@
 -- ---------------------------------------------------------------------------
 create table public.profiles (
   id                    uuid primary key references auth.users (id) on delete cascade,
-  role                  public.app_role not null default 'parent',
+  role                  public.app_role not null default 'client',
+  -- Chosen at signup. Only meaningful for clients (ignored for the coach).
+  client_type           public.client_type not null default 'parent',
   full_name             text check (char_length(full_name) <= 120),
   -- Copied from auth.users by trigger (read-only for users). Lets the coach
   -- see/contact parents without querying the auth schema.
@@ -21,13 +23,16 @@ create table public.profiles (
   updated_at            timestamptz not null default now()
 );
 
--- Exactly one coach account. Drop this index if an assistant coach is added later.
+-- Exactly one coach account: Jonathan, who is also the app's admin.
 create unique index profiles_single_coach on public.profiles ((true)) where role = 'coach';
 create index profiles_role_idx on public.profiles (role);
 
 -- ---------------------------------------------------------------------------
--- players: children on a parent's account. Minimal data on purpose:
--- no email, phone, photos or birth date.
+-- players: the athletes on a client account: a parent's children, and/or the
+-- account holder themselves (is_self, for adult clients). Minimal data on
+-- purpose: no email, phone, photos or birth date.
+-- parent_id here and on other tables means "the client account that owns
+-- this", whether that client is a parent or an adult athlete.
 -- ---------------------------------------------------------------------------
 create table public.players (
   id           uuid primary key default gen_random_uuid(),
@@ -36,12 +41,16 @@ create table public.players (
   age_group    text check (age_group ~ '^(U([5-9]|1[0-9]|2[0-3])|Adult)$'),
   skill_level  public.skill_level,
   notes        text check (char_length(notes) <= 1000),
+  -- True when this athlete IS the account holder (an adult training themselves).
+  is_self      boolean not null default false,
   -- Archive instead of delete once a player has booking history.
   active       boolean not null default true,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
 create index players_parent_idx on public.players (parent_id);
+-- At most one "myself" athlete per account.
+create unique index players_one_self_per_account on public.players (parent_id) where is_self;
 
 -- ---------------------------------------------------------------------------
 -- session_types: what can be booked (1-on-1, small group, ...).

@@ -8,7 +8,7 @@ export default function EmbedBook() {
     <div className="min-h-screen bg-ink p-4 sm:p-6">
       <PublicBook initialType={params.get("type")} embed />
       <p className="mt-6 text-center text-sm">
-        <a href="/book" target="_blank" rel="noopener" className="font-semibold text-brand-soft hover:underline">Open the full booking calendar →</a>
+        <a href="/book" target="_blank" rel="noopener" className="font-semibold text-brand hover:underline">Open the full booking calendar →</a>
       </p>
     </div>
   );

@@ -73,9 +73,11 @@ create trigger drills_updated_at        before update on public.drills        fo
 create trigger inquiries_updated_at     before update on public.inquiries     for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
--- New auth user -> profile row (always role 'parent').
+-- New auth user -> profile row (always role 'client').
 -- The role is NEVER taken from signup metadata; users control that metadata,
--- so trusting it would let anyone sign up as the coach.
+-- so trusting it would let anyone sign up as the coach. client_type ('parent' or
+-- 'adult') does come from metadata: it grants nothing. Adult clients also get
+-- a "myself" player so they can book straight away.
 -- ---------------------------------------------------------------------------
 create or replace function public.handle_new_user()
 returns trigger
@@ -83,15 +85,26 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_name text := nullif(left(btrim(coalesce(new.raw_user_meta_data ->> 'full_name', '')), 120), '');
+  v_type public.client_type :=
+    case when new.raw_user_meta_data ->> 'account_type' = 'adult' then 'adult' else 'parent' end;
 begin
-  insert into public.profiles (id, email, full_name, phone)
+  insert into public.profiles (id, email, full_name, phone, client_type)
   values (
     new.id,
     new.email,
-    nullif(left(btrim(coalesce(new.raw_user_meta_data ->> 'full_name', '')), 120), ''),
-    nullif(left(btrim(coalesce(new.raw_user_meta_data ->> 'phone', '')), 30), '')
+    v_name,
+    nullif(left(btrim(coalesce(new.raw_user_meta_data ->> 'phone', '')), 30), ''),
+    v_type
   )
   on conflict (id) do nothing;
+
+  if v_type = 'adult' then
+    insert into public.players (parent_id, first_name, age_group, is_self)
+    values (new.id, coalesce(left(split_part(v_name, ' ', 1), 60), 'Me'), 'Adult', true)
+    on conflict do nothing;
+  end if;
   return new;
 end;
 $$;

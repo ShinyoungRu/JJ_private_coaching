@@ -91,23 +91,23 @@ export default function Availability() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-white">Weekly hours</h2>
+          <h2 className="mb-4 text-lg font-semibold text-fg">Weekly hours</h2>
           {hours.loading ? <Loading /> : (
             <div className="space-y-3">
               {ORDER.map((d) => {
                 const rows = (hours.data ?? []).filter((h) => h.day_of_week === d);
                 return (
                   <div key={d} className="flex flex-col gap-2 border-b border-line pb-3 last:border-0 sm:flex-row sm:items-start">
-                    <div className="w-28 shrink-0 pt-1 text-sm font-semibold text-gray-200">{DAY_NAMES[d]}</div>
+                    <div className="w-28 shrink-0 pt-1 text-sm font-semibold text-fg-2">{DAY_NAMES[d]}</div>
                     <div className="flex flex-1 flex-wrap gap-2">
-                      {rows.length === 0 && <span className="pt-1 text-sm text-gray-600">Unavailable</span>}
+                      {rows.length === 0 && <span className="pt-1 text-sm text-muted">Unavailable</span>}
                       {rows.map((h) => (
-                        <div key={h.id} className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 text-sm ${h.active ? "border-line bg-ink-deep" : "border-dashed border-line text-gray-500"}`}>
+                        <div key={h.id} className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 text-sm ${h.active ? "border-line bg-ink-deep" : "border-dashed border-line text-subtle"}`}>
                           <span className="font-semibold">{fmtClock(h.start_time)}–{fmtClock(h.end_time)}</span>
-                          <button onClick={() => toggle(h.id, !h.active)} className="ml-1 rounded px-1 text-xs text-gray-400 hover:text-white" title={h.active ? "Pause" : "Resume"}>
+                          <button onClick={() => toggle(h.id, !h.active)} className="ml-1 rounded px-1 text-xs text-muted hover:text-brand" title={h.active ? "Pause" : "Resume"}>
                             {h.active ? "pause" : "resume"}
                           </button>
-                          <button onClick={() => remove(h.id)} className="rounded px-1 text-gray-500 hover:text-red-300" aria-label="Remove">×</button>
+                          <button onClick={() => remove(h.id)} className="rounded px-1 text-subtle hover:text-danger" aria-label="Remove">×</button>
                         </div>
                       ))}
                     </div>
@@ -127,7 +127,7 @@ export default function Availability() {
         </Card>
 
         <Card>
-          <h2 className="mb-4 text-lg font-semibold text-white">Time off</h2>
+          <h2 className="mb-4 text-lg font-semibold text-fg">Time off</h2>
           <form onSubmit={addBlock} className="space-y-3 rounded-xl border border-line bg-ink-deep/60 p-4">
             <Segmented value={blockMode} onChange={setBlockMode} options={[{ value: "days", label: "Whole days" }, { value: "hours", label: "Part of a day" }]} />
             {blockMode === "days" ? (
@@ -157,7 +157,7 @@ export default function Availability() {
             {blocks.loading ? <Loading /> : (blocks.data ?? []).length === 0 ? <Empty title="No upcoming time off" /> : (blocks.data ?? []).map((b) => (
               <div key={b.id} className="flex items-center justify-between gap-3 rounded-xl border border-line px-4 py-3">
                 <div>
-                  <div className="text-sm font-semibold text-white">{fmtDateTime(b.start_time, tz)} → {fmtDateTime(b.end_time, tz)}</div>
+                  <div className="text-sm font-semibold text-fg">{fmtDateTime(b.start_time, tz)} → {fmtDateTime(b.end_time, tz)}</div>
                   {b.reason && <Badge>{b.reason}</Badge>}
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => unblock(b.id)}>Remove</Button>

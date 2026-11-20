@@ -1,15 +1,17 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Alert, Button, Card, Checkbox, Field, Input, PageHeader, useToast } from "../components/ui";
+import { Alert, Button, Card, Checkbox, Field, Input, PageHeader, Segmented, useToast } from "../components/ui";
 import { errorMessage, unwrap } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import { CLIENT_TYPE_LABEL, type ClientType } from "../lib/types";
 
 export default function Account() {
-  const { profile, session, refresh } = useAuth();
+  const { profile, session, refresh, isCoach } = useAuth();
   const toast = useToast();
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [optIn, setOptIn] = useState(true);
+  const [clientType, setClientType] = useState<ClientType>("parent");
   const [saving, setSaving] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,6 +21,7 @@ export default function Account() {
     setFullName(profile?.full_name ?? "");
     setPhone(profile?.phone ?? "");
     setOptIn(profile?.announcements_opt_in ?? true);
+    setClientType(profile?.client_type ?? "parent");
   }, [profile]);
 
   async function saveProfile(e: FormEvent) {
@@ -26,7 +29,7 @@ export default function Account() {
     if (!profile) return;
     setSaving(true);
     try {
-      unwrap(await supabase.from("profiles").update({ full_name: fullName.trim() || null, phone: phone.trim() || null, announcements_opt_in: optIn }).eq("id", profile.id).select().single());
+      unwrap(await supabase.from("profiles").update({ full_name: fullName.trim() || null, phone: phone.trim() || null, announcements_opt_in: optIn, client_type: clientType }).eq("id", profile.id).select().single());
       await refresh();
       toast("Saved");
     } catch (err) {
@@ -59,13 +62,29 @@ export default function Account() {
       <div className="space-y-6">
         <Card>
           <form onSubmit={saveProfile} className="space-y-4">
-            <h2 className="text-lg font-semibold text-white">Your details</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-fg">Your details</h2>
+              {profile && <span className="text-sm text-muted">{isCoach ? "Coach account" : "Client account"}</span>}
+            </div>
+            {!isCoach && (
+              <Field label="I'm booking as" hint={clientType === "adult"
+                ? "Adults book for themselves and can add children too. Add yourself on the Players page if you haven't yet."
+                : "Parents book for their children. Training yourself too? Add yourself on the Players page."}>
+                {() => (
+                  <Segmented<ClientType>
+                    value={clientType}
+                    onChange={setClientType}
+                    options={(["parent", "adult"] as const).map((v) => ({ value: v, label: CLIENT_TYPE_LABEL[v] }))}
+                  />
+                )}
+              </Field>
+            )}
             <Field label="Name">{(id) => <Input id={id} value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={120} autoComplete="name" />}</Field>
             <Field label="Phone">{(id) => <Input id={id} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={30} autoComplete="tel" />}</Field>
             <Checkbox
               checked={optIn}
               onChange={(e) => setOptIn(e.target.checked)}
-              label={<>Email me announcements from the coach <span className="block text-xs text-gray-500">Booking confirmations, reminders and same-day changes to your sessions are always sent.</span></>}
+              label={<>Email me announcements from the coach <span className="block text-xs text-subtle">Booking confirmations, reminders and same-day changes to your sessions are always sent.</span></>}
             />
             <Button type="submit" loading={saving}>Save</Button>
           </form>
@@ -75,7 +94,7 @@ export default function Account() {
 
         <Card>
           <form onSubmit={changeEmail} className="space-y-4">
-            <h2 className="text-lg font-semibold text-white">Change email</h2>
+            <h2 className="text-lg font-semibold text-fg">Change email</h2>
             <Field label="New email">{(id) => <Input id={id} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />}</Field>
             <Button type="submit" variant="secondary">Send confirmation</Button>
           </form>
@@ -83,7 +102,7 @@ export default function Account() {
 
         <Card>
           <form onSubmit={changePassword} className="space-y-4">
-            <h2 className="text-lg font-semibold text-white">Change password</h2>
+            <h2 className="text-lg font-semibold text-fg">Change password</h2>
             <Field label="New password" hint="At least 8 characters, letters and numbers.">
               {(id) => <Input id={id} type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />}
             </Field>

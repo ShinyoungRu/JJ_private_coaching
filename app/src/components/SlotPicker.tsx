@@ -46,9 +46,9 @@ export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onS
         <Button variant="secondary" size="sm" disabled={!canPrev} onClick={() => setFrom(addDays(from, -DAYS_PER_PAGE) < today ? today : addDays(from, -DAYS_PER_PAGE))} aria-label="Previous week">
           ← Prev
         </Button>
-        <div className="text-center text-sm font-semibold text-gray-200">
+        <div className="text-center text-sm font-semibold text-fg-2">
           {fmtDay(from, { month: "short", day: "numeric" })} – {fmtDay(to, { month: "short", day: "numeric" })}
-          <div className="text-xs font-normal text-gray-500">Times in {tzAbbrev(tz)}</div>
+          <div className="text-xs font-normal text-subtle">Times in {tzAbbrev(tz)}</div>
         </div>
         <Button variant="secondary" size="sm" disabled={!canNext} onClick={() => setFrom(addDays(from, DAYS_PER_PAGE))} aria-label="Next week">
           Next →
@@ -56,18 +56,18 @@ export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onS
       </div>
 
       {error && <Alert tone="error">{error}</Alert>}
-      {loading && !slots && <div className="flex justify-center py-10 text-gray-400"><Spinner /></div>}
+      {loading && !slots && <div className="flex justify-center py-10 text-muted"><Spinner /></div>}
 
       {slots && (
         <div className={cx("space-y-2 transition-opacity", loading && "opacity-50")}>
           {byDay.map(([day, list]) => (
             <div key={day} className="flex flex-col gap-2 rounded-xl border border-line bg-ink-deep/60 p-3 sm:flex-row sm:items-start">
               <div className="w-28 shrink-0 pt-1.5">
-                <div className="text-sm font-semibold text-white">{fmtDay(day, { weekday: "long" })}</div>
-                <div className="text-xs text-gray-500">{fmtDay(day, { month: "short", day: "numeric" })}</div>
+                <div className="text-sm font-semibold text-fg">{fmtDay(day, { weekday: "long" })}</div>
+                <div className="text-xs text-subtle">{fmtDay(day, { month: "short", day: "numeric" })}</div>
               </div>
               {list.length === 0 ? (
-                <div className="pt-1.5 text-sm text-gray-600">No open times</div>
+                <div className="pt-1.5 text-sm text-muted">No open times</div>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {list.map((s) => {
@@ -82,12 +82,12 @@ export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onS
                           "rounded-lg border px-3 py-2 text-sm font-semibold transition-colors",
                           isSel
                             ? "border-brand bg-brand text-white"
-                            : "border-line bg-panel text-gray-100 hover:border-brand-soft hover:text-white",
+                            : "border-line bg-panel text-fg hover:border-brand-soft hover:text-brand",
                         )}
                       >
                         {fmtTime(s.slot_start, tz)}
                         {s.capacity > 1 && (
-                          <span className={cx("ml-1.5 text-xs font-medium", isSel ? "text-blue-100" : "text-gray-400")}>
+                          <span className={cx("ml-1.5 text-xs font-medium", isSel ? "text-blue-100" : "text-muted")}>
                             {s.spots_left} left
                           </span>
                         )}
@@ -99,8 +99,8 @@ export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onS
             </div>
           ))}
           {total === 0 && !loading && (
-            <p className="pt-2 text-center text-sm text-gray-400">
-              Nothing open this week.{canNext && <> <button className="font-semibold text-brand-soft hover:underline" onClick={() => setFrom(addDays(from, DAYS_PER_PAGE))}>Check next week →</button></>}
+            <p className="pt-2 text-center text-sm text-muted">
+              Nothing open this week.{canNext && <> <button className="font-semibold text-brand hover:underline" onClick={() => setFrom(addDays(from, DAYS_PER_PAGE))}>Check next week →</button></>}
             </p>
           )}
         </div>

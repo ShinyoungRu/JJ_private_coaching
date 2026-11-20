@@ -1,10 +1,11 @@
 -- Row Level Security + privilege tests. Run: npx supabase test db
--- Uses the seed data (parent A = Alex with Mia/Leo, parent B = Blair with Sam).
+-- Uses the seed data: parent A = Alex with Mia/Leo, parent B = Blair with Sam,
+-- adult client = Jordan (trains themselves), coach = coach@ (Jonathan, the one admin).
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(42);
+select plan(54);
 
 -- Helpers to impersonate users the same way PostgREST does.
 create or replace function pg_temp.act_as(p_user uuid) returns void language plpgsql as $$
@@ -104,6 +105,40 @@ select results_eq($$ select notes from players where id = 'b0000000-0000-4000-80
   'parent A can edit their own player');
 
 -- =========================================================================
+-- Adult client (signed up as an adult athlete)
+-- =========================================================================
+select pg_temp.act_as('a0000000-0000-4000-8000-000000000005');
+select results_eq($$ select client_type::text from profiles $$, array['adult'],
+  'adult client sees only their own profile, typed adult');
+select results_eq($$ select first_name || ':' || is_self || ':' || age_group from players $$, array['Jordan:true:Adult'],
+  'signup created the adult''s own "myself" player');
+select is_empty($$ select 1 from bookings $$, 'adult client sees no other client''s bookings');
+select lives_ok($$ insert into players (first_name, age_group) values ('Riley', 'U10') $$,
+  'adult client can add a child too');
+select throws_ok($$ insert into players (first_name, age_group, is_self) values ('Me again', 'Adult', true) $$,
+  '23505', null, 'an account can have only one "myself" player');
+select lives_ok($$ update profiles set client_type = 'parent' where id = 'a0000000-0000-4000-8000-000000000005' $$,
+  'a client can change their own account type');
+select ok((select count(*) from public.get_available_slots('c0000000-0000-4000-8000-000000000001')) > 0,
+  'adult client can list open slots');
+select pg_temp.reset_role();
+
+-- Signup trigger: role always client, client_type from metadata, never the coach role.
+insert into auth.users (id, email, raw_user_meta_data)
+values ('a0000000-0000-4000-8000-0000000000aa', 'new.adult@example.com',
+        '{"full_name":"Taylor Brooks","account_type":"adult","role":"coach"}');
+select results_eq($$ select role::text || ':' || client_type from profiles where id = 'a0000000-0000-4000-8000-0000000000aa' $$,
+  array['client:adult'], 'signup metadata can choose adult but can never make someone the coach');
+select results_eq($$ select first_name from players where parent_id = 'a0000000-0000-4000-8000-0000000000aa' and is_self $$,
+  array['Taylor'], 'new adult signup gets a "myself" player named from their first name');
+insert into auth.users (id, email, raw_user_meta_data)
+values ('a0000000-0000-4000-8000-0000000000bb', 'new.parent@example.com', '{"full_name":"Pat Kim"}');
+select results_eq($$ select client_type::text from profiles where id = 'a0000000-0000-4000-8000-0000000000bb' $$,
+  array['parent'], 'signup without an account type defaults to parent');
+select is_empty($$ select 1 from players where parent_id = 'a0000000-0000-4000-8000-0000000000bb' $$,
+  'new parent signup starts with no players');
+
+-- =========================================================================
 -- Anonymous (not logged in)
 -- =========================================================================
 select pg_temp.act_as_anon();
@@ -116,15 +151,19 @@ select throws_ok($$ select * from public.get_available_slots('c0000000-0000-4000
   '42501', null, 'anon cannot call the slot RPC directly (public data goes through Edge Functions)');
 
 -- =========================================================================
--- Coach
+-- Coach (Jonathan, the app's one admin)
 -- =========================================================================
 select pg_temp.act_as('a0000000-0000-4000-8000-000000000001');
-select results_eq($$ select count(*)::int from players $$, array[3], 'coach sees every player');
+-- 4 seeded players + Riley and Taylor added by the adult-client tests above.
+select results_eq($$ select count(*)::int from players $$, array[6], 'coach sees every player');
 select results_eq($$ select count(*)::int from inquiries $$, array[2], 'coach sees inquiries');
 select lives_ok($$ select public.admin_stats() $$, 'coach can read stats');
 select lives_ok($$ update inquiries set status = 'closed' where email = 'jordan@example.com' $$, 'coach can update inquiry status');
 select throws_ok($$ update profiles set role = 'coach' where id = 'a0000000-0000-4000-8000-000000000002' $$,
   '42501', null, 'even the coach cannot change roles from the app (SQL only)');
+select pg_temp.reset_role();
+select throws_ok($$ update profiles set role = 'coach' where id = 'a0000000-0000-4000-8000-000000000003' $$,
+  '23505', null, 'the database allows only one coach account, even from SQL');
 
 select pg_temp.reset_role();
 select * from finish();

@@ -42,13 +42,13 @@ export default function Inquiries() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="font-semibold text-white">{i.name}</h2>
+                    <h2 className="font-semibold text-fg">{i.name}</h2>
                     <Badge tone={TONE[i.status]}>{i.status}</Badge>
                   </div>
-                  <div className="text-sm text-gray-400">
-                    <a className="hover:text-white" href={`mailto:${i.email}`}>{i.email}</a>
-                    {i.phone && <> · <a className="hover:text-white" href={`tel:${i.phone}`}>{i.phone}</a></>}
-                    <span className="text-gray-600"> · {fmtDateTime(i.created_at, tz)}</span>
+                  <div className="text-sm text-muted">
+                    <a className="hover:text-brand" href={`mailto:${i.email}`}>{i.email}</a>
+                    {i.phone && <> · <a className="hover:text-brand" href={`tel:${i.phone}`}>{i.phone}</a></>}
+                    <span className="text-subtle"> · {fmtDateTime(i.created_at, tz)}</span>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -64,7 +64,7 @@ export default function Inquiries() {
                     : <Button size="sm" variant="ghost" onClick={() => setStatus(i, "new")}>Reopen</Button>}
                 </div>
               </div>
-              <p className="mt-3 whitespace-pre-line text-gray-200">{i.message}</p>
+              <p className="mt-3 whitespace-pre-line text-fg-2">{i.message}</p>
             </Card>
           ))}
         </div>

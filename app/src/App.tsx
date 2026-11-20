@@ -28,8 +28,8 @@ const Settings = lazy(() => import("./pages/admin/Settings"));
 function NotFound() {
   return (
     <div className="py-16 text-center">
-      <h1 className="text-3xl font-bold text-white">Page not found</h1>
-      <p className="mt-2 text-gray-400">That page doesn't exist.</p>
+      <h1 className="text-3xl font-bold text-fg">Page not found</h1>
+      <p className="mt-2 text-muted">That page doesn't exist.</p>
       <Link to="/book" className={buttonClasses("primary", "md", "mt-6")}>Book a session</Link>
     </div>
   );

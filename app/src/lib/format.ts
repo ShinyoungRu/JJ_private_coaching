@@ -100,6 +100,11 @@ export function fmtClock(t: string): string {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
+/** plural(1, "client") -> "1 client", plural(3, "client") -> "3 clients". */
+export function plural(n: number, word: string, many = `${word}s`): string {
+  return `${n} ${n === 1 ? word : many}`;
+}
+
 export function titleCase(s: string | null | undefined): string {
   if (!s) return "";
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());

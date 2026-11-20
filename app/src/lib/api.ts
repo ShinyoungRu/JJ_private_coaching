@@ -52,6 +52,12 @@ export async function publicGet<D>(path: string): Promise<D> {
   return res.json() as Promise<D>;
 }
 
+/** The signed-in client's active players: their own athlete profile (is_self) first, then by name. */
+export async function listMyPlayers() {
+  return unwrap(await supabase.from("players").select("*").eq("active", true)
+    .order("is_self", { ascending: false }).order("first_name"));
+}
+
 export function errorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   return "Something went wrong.";

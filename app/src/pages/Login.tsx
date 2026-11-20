@@ -1,9 +1,10 @@
 import { type FormEvent, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
-import { Alert, Button, Card, Field, Input, Segmented } from "../components/ui";
+import { Alert, Button, Card, cx, Field, Input, Segmented } from "../components/ui";
 import { errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import type { ClientType } from "../lib/types";
 
 type Mode = "signin" | "signup" | "magic" | "forgot";
 
@@ -23,6 +24,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  // ?account=adult preselects the adult option (handy for links from the website).
+  const [accountType, setAccountType] = useState<ClientType>(params.get("account") === "adult" ? "adult" : "parent");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
@@ -47,7 +50,7 @@ export default function Login() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName.trim(), phone: phone.trim() }, emailRedirectTo: `${origin}${next}` },
+          options: { data: { full_name: fullName.trim(), phone: phone.trim(), account_type: accountType }, emailRedirectTo: `${origin}${next}` },
         });
         if (error) throw error;
         if (data.session) navigate(next, { replace: true });
@@ -79,7 +82,7 @@ export default function Login() {
 
   const titles: Record<Mode, [string, string]> = {
     signin: ["Welcome back", "Log in to book sessions and follow your player's progress."],
-    signup: ["Create a parent account", "One account for your whole family. Add each child after signing up."],
+    signup: ["Create an account", "Parents book for their kids. Athletes 18+ book for themselves. Either way, you can add more players later."],
     magic: ["Email me a sign-in link", "No password needed. We'll email you a one-time link."],
     forgot: ["Reset your password", "We'll email you a link to choose a new one."],
   };
@@ -87,8 +90,8 @@ export default function Login() {
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-white">{titles[mode][0]}</h1>
-        <p className="mt-1.5 text-sm text-gray-400">{titles[mode][1]}</p>
+        <h1 className="text-2xl font-bold text-fg">{titles[mode][0]}</h1>
+        <p className="mt-1.5 text-sm text-muted">{titles[mode][1]}</p>
 
         {(mode === "signin" || mode === "signup") && (
           <Segmented
@@ -116,7 +119,31 @@ export default function Login() {
             {error && <Alert tone="error">{error}</Alert>}
             {mode === "signup" && (
               <>
-                <Field label="Your name">{(id) => <Input id={id} value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" required maxLength={120} />}</Field>
+                <fieldset>
+                  <legend className="mb-1.5 block text-sm font-medium text-fg-2">Who is the training for?</legend>
+                  <div className="grid grid-cols-2 gap-2">
+                    {([
+                      ["parent", "My child or children", "Parent or guardian"],
+                      ["adult", "Myself", "Athlete 18 or older"],
+                    ] as const).map(([value, title, hint]) => (
+                      <label
+                        key={value}
+                        className={cx(
+                          "cursor-pointer rounded-xl border p-3 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-brand/30",
+                          accountType === value ? "border-brand bg-brand/10" : "border-line-strong bg-panel hover:border-faint",
+                        )}
+                      >
+                        <input type="radio" name="account_type" value={value} checked={accountType === value}
+                          onChange={() => setAccountType(value)} className="sr-only" />
+                        <span className="block text-sm font-semibold text-fg">{title}</span>
+                        <span className="mt-0.5 block text-xs text-muted">{hint}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <Field label="Your name" hint={accountType === "adult" ? "You'll be added as the athlete, using your first name." : undefined}>
+                  {(id) => <Input id={id} value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" required maxLength={120} />}
+                </Field>
                 <Field label="Phone (optional)" hint="So the coach can reach you about schedule changes.">
                   {(id) => <Input id={id} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" maxLength={30} />}
                 </Field>
@@ -140,17 +167,17 @@ export default function Login() {
         <div className="mt-6 flex flex-col items-center gap-2 text-sm">
           {mode === "signin" && !sent && (
             <>
-              <button className="font-semibold text-brand-soft hover:underline" onClick={() => setMode("magic")}>Email me a sign-in link instead</button>
-              <button className="text-gray-400 hover:text-gray-200" onClick={() => setMode("forgot")}>Forgot password?</button>
+              <button className="font-semibold text-brand hover:underline" onClick={() => setMode("magic")}>Email me a sign-in link instead</button>
+              <button className="text-muted hover:text-fg" onClick={() => setMode("forgot")}>Forgot password?</button>
             </>
           )}
           {(mode === "magic" || mode === "forgot") && !sent && (
-            <button className="font-semibold text-brand-soft hover:underline" onClick={() => setMode("signin")}>← Back to log in</button>
+            <button className="font-semibold text-brand hover:underline" onClick={() => setMode("signin")}>← Back to log in</button>
           )}
         </div>
       </Card>
-      <p className="mt-6 text-center text-sm text-gray-500">
-        Just looking? <Link to="/book" className="font-semibold text-gray-300 hover:text-white">See open times</Link>
+      <p className="mt-6 text-center text-sm text-subtle">
+        Just looking? <Link to="/book" className="font-semibold text-fg-2 hover:text-brand">See open times</Link>
       </p>
     </div>
   );

@@ -582,7 +582,7 @@ begin
          cancelled_by      = p_actor,
          cancel_reason     = coalesce(
                                nullif(left(btrim(p_reason), 300), ''),
-                               case when v_is_coach then 'Cancelled by coach' else 'Cancelled by parent' end),
+                               case when v_is_coach then 'Cancelled by coach' else 'Cancelled by client' end),
          late_cancellation = not v_within,
          hold_expires_at   = null
    where id = b.id;
@@ -894,7 +894,7 @@ begin
     return query
       select p.id, p.email, p.full_name
       from public.profiles p
-      where p.role = 'parent' and p.announcements_opt_in and p.email is not null;
+      where p.role = 'client' and p.announcements_opt_in and p.email is not null;
   elsif p_audience in ('today', 'this_week') then
     return query
       select distinct p.id, p.email, p.full_name

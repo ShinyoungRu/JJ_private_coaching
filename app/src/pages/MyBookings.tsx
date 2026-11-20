@@ -62,15 +62,15 @@ export default function MyBookings() {
               <Card key={b.id} className="p-4 sm:p-5">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <div className="text-lg font-semibold text-white">{fmtLongDateTime(b.start_time, tz)}</div>
-                    <div className="mt-0.5 text-sm text-gray-400">
+                    <div className="text-lg font-semibold text-fg">{fmtLongDateTime(b.start_time, tz)}</div>
+                    <div className="mt-0.5 text-sm text-muted">
                       {b.player?.first_name} · {b.session_type?.name} · until {fmtTime(b.end_time, tz)}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <StatusBadge status={b.status} late={b.late_cancellation} />
                       {b.status !== "pending_payment" && <PaymentBadge method={b.paid_with} status={b.payment_status} />}
                     </div>
-                    {b.parent_note && <p className="mt-2 text-sm text-gray-400">Your note: {b.parent_note}</p>}
+                    {b.parent_note && <p className="mt-2 text-sm text-muted">Your note: {b.parent_note}</p>}
                   </div>
                   {tab === "upcoming" && (
                     <div className="flex shrink-0 gap-2">
@@ -112,12 +112,12 @@ export default function MyBookings() {
 export function NoteView({ note }: { note: SessionNote }) {
   return (
     <div className="mt-4 space-y-2 rounded-xl border border-line bg-ink-deep/60 p-4 text-sm">
-      <div className="text-xs font-semibold uppercase tracking-wide text-brand-soft">Coach's notes</div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-brand">Coach's notes</div>
       {note.skills_worked_on.length > 0 && (
         <div className="flex flex-wrap gap-1.5">{note.skills_worked_on.map((s) => <Badge key={s} tone="blue">{s}</Badge>)}</div>
       )}
-      {note.coach_notes && <p className="whitespace-pre-line text-gray-200">{note.coach_notes}</p>}
-      {note.homework && <p className="text-gray-300"><span className="font-semibold text-white">Homework:</span> {note.homework}</p>}
+      {note.coach_notes && <p className="whitespace-pre-line text-fg-2">{note.coach_notes}</p>}
+      {note.homework && <p className="text-fg-2"><span className="font-semibold text-fg">Homework:</span> {note.homework}</p>}
     </div>
   );
 }
@@ -182,11 +182,11 @@ function CancelModal({ booking, windowHours, refundMode, onClose, onDone }: {
       }
     >
       <div className="space-y-4">
-        <p className="font-semibold text-white">{booking.player?.first_name} · {booking.session_type?.name}</p>
+        <p className="font-semibold text-fg">{booking.player?.first_name} · {booking.session_type?.name}</p>
         <Alert tone={inside && !pending ? "warning" : "info"}>{outcome}</Alert>
         {!pending && (
           <div>
-            <label htmlFor="reason" className="mb-1.5 block text-sm font-medium text-gray-200">Reason (optional)</label>
+            <label htmlFor="reason" className="mb-1.5 block text-sm font-medium text-fg-2">Reason (optional)</label>
             <Textarea id="reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} />
           </div>
         )}
@@ -235,7 +235,7 @@ function RescheduleModal({ booking, tz, onClose, onDone }: {
         </>
       }
     >
-      <p className="mb-4 text-sm text-gray-400">Currently {fmtLongDateTime(booking.start_time, tz)}. Your payment carries over.</p>
+      <p className="mb-4 text-sm text-muted">Currently {fmtLongDateTime(booking.start_time, tz)}. Your payment carries over.</p>
       {error && <Alert tone="error" className="mb-4">{error}</Alert>}
       <SlotPicker sessionTypeId={booking.session_type_id} tz={tz} selected={slot?.slot_start} onSelect={setSlot} />
     </Modal>

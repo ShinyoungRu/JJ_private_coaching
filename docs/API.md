@@ -55,10 +55,12 @@ Route guards: logged-out users go to `/login?next=<path>`. Show `/admin*` only w
 ## Auth
 
 ```js
-// Sign up (profile row is created automatically, role is always 'parent')
+// Sign up (profile row is created automatically, role is always 'client').
+// account_type: 'parent' (booking for children, the default) or 'adult' (18+, booking
+// for themselves: a "myself" player with is_self = true is created automatically).
 await supabase.auth.signUp({
   email, password, // min 8 chars, letters + digits
-  options: { data: { full_name, phone }, emailRedirectTo: `${APP_URL}/login` },
+  options: { data: { full_name, phone, account_type }, emailRedirectTo: `${APP_URL}/login` },
 });
 await supabase.auth.signInWithPassword({ email, password });
 await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${APP_URL}/bookings` } }); // magic link
@@ -242,7 +244,7 @@ Allowed uploads: mp4, mov, webm, m4v, jpg, png, webp. 500 MB bucket limit (50 MB
 
 ### Families, credits, settings
 ```js
-supabase.from("profiles").select("*, players(*)").eq("role", "parent").order("full_name");
+supabase.from("profiles").select("*, players(*)").eq("role", "client").order("full_name");
 supabase.from("package_purchases").insert({ parent_id, source: "coach_grant", label: "Comp session", sessions_total: 1, sessions_remaining: 1 });
 supabase.from("app_settings").update({ cancellation_window_hours: 24, reminder_hours_before: 24 }).eq("id", 1);
 ```

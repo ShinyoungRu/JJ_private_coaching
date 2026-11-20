@@ -11,7 +11,14 @@ create extension if not exists pg_cron;
 -- ---------------------------------------------------------------------------
 -- Enum types
 -- ---------------------------------------------------------------------------
-create type public.app_role as enum ('coach', 'parent');
+-- Account types:
+--   coach  - Jonathan. The app's one admin: runs the business and every session.
+--            Exactly one coach account exists (profiles_single_coach).
+--   client - a customer. profiles.client_type says whether they signed up as a
+--            parent/guardian (booking for children) or an adult athlete (18+,
+--            booking for themselves). Either kind can add more players later.
+create type public.app_role as enum ('coach', 'client');
+create type public.client_type as enum ('parent', 'adult');
 
 -- pending_payment = slot is held while the parent is on Stripe Checkout.
 -- It is not one of the four statuses in the brief, but without it two parents

@@ -7,7 +7,7 @@ import {
 } from "../../components/ui";
 import { errorMessage, invoke, unwrap } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
-import { addDays, firstName, fmtDay, fmtLongDateTime, fmtMoney, fmtTime, todayKey, zonedToUtc } from "../../lib/format";
+import { addDays, firstName, fmtDay, fmtLongDateTime, fmtMoney, fmtTime, plural, todayKey, zonedToUtc } from "../../lib/format";
 import { supabase } from "../../lib/supabase";
 import type { AdminStats, ScheduleRow, Slot } from "../../lib/types";
 import { useLoad } from "../../lib/useLoad";
@@ -65,14 +65,14 @@ export default function Dashboard() {
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Sessions this month" value={s?.sessions_this_month ?? "–"} hint={s ? `${s.completed_this_month} completed · ${s.no_shows_this_month} no-shows` : undefined} />
         <Stat label="Revenue this month" value={s ? fmtMoney(s.revenue_this_month_cents) : "–"} hint="Card + packages, after refunds" />
-        <Stat label="Active players" value={s?.active_players ?? "–"} hint={s ? `${s.total_families} families` : undefined} />
+        <Stat label="Active players" value={s?.active_players ?? "–"} hint={s ? plural(s.total_families, "client") : undefined} />
         <Link to="/admin/inquiries" className="block transition-transform hover:-translate-y-0.5">
           <Stat label="New inquiries" value={s?.new_inquiries ?? "–"} hint={s?.unpaid_manual_bookings ? `${s.unpaid_manual_bookings} unpaid cash/Venmo` : "From the website"} />
         </Link>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-white">Schedule</h2>
+        <h2 className="text-lg font-semibold text-fg">Schedule</h2>
         <Segmented value={range} onChange={setRange} options={[{ value: "past", label: "Last 7 days" }, { value: "today", label: "Today" }, { value: "week", label: "This week" }, { value: "month", label: "30 days" }]} />
       </div>
 
@@ -82,7 +82,7 @@ export default function Dashboard() {
         <div className="space-y-6">
           {grouped.map(([day, slots]) => (
             <section key={day}>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-400">
+              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
                 {day === today ? "Today" : fmtDay(day, { weekday: "long", month: "short", day: "numeric" })}
               </h3>
               <div className="space-y-3">
@@ -93,8 +93,8 @@ export default function Dashboard() {
                     <Card key={key} flush className="overflow-hidden">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3 sm:px-5">
                         <div>
-                          <span className="text-base font-bold text-white">{fmtTime(first.start_time, tz)}–{fmtTime(first.end_time, tz)}</span>
-                          <span className="ml-2 text-sm text-gray-400">{first.session_type_name}</span>
+                          <span className="text-base font-bold text-fg">{fmtTime(first.start_time, tz)}–{fmtTime(first.end_time, tz)}</span>
+                          <span className="ml-2 text-sm text-muted">{first.session_type_name}</span>
                         </div>
                         {first.max_players > 1 && <Badge tone="blue">{active.length}/{first.max_players} players</Badge>}
                       </div>
@@ -102,15 +102,15 @@ export default function Dashboard() {
                         {rows.map((r) => (
                           <li key={r.booking_id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                             <div className="min-w-0">
-                              <div className="font-semibold text-white">
+                              <div className="font-semibold text-fg">
                                 {r.player_first_name}
-                                <span className="ml-2 text-sm font-normal text-gray-400">{[r.player_age_group, r.player_skill_level].filter(Boolean).join(" · ")}</span>
+                                <span className="ml-2 text-sm font-normal text-muted">{[r.player_age_group, r.player_skill_level].filter(Boolean).join(" · ")}</span>
                               </div>
-                              <div className="text-sm text-gray-400">
+                              <div className="text-sm text-muted">
                                 {r.parent_name || r.parent_email}
-                                {r.parent_phone && <> · <a href={`tel:${r.parent_phone}`} className="hover:text-white">{r.parent_phone}</a></>}
+                                {r.parent_phone && <> · <a href={`tel:${r.parent_phone}`} className="hover:text-brand">{r.parent_phone}</a></>}
                               </div>
-                              {r.parent_note && <div className="mt-1 text-sm text-amber-200/80">“{r.parent_note}”</div>}
+                              {r.parent_note && <div className="mt-1 text-sm text-warn">“{r.parent_note}”</div>}
                               <div className="mt-1.5 flex flex-wrap gap-1.5">
                                 <StatusBadge status={r.status} late={r.late_cancellation} />
                                 {r.status !== "pending_payment" && <PaymentBadge method={r.paid_with} status={r.payment_status} />}
@@ -201,15 +201,15 @@ function SessionNoteModal({ row, tz, onClose, onSaved }: { row: ScheduleRow | nu
     <Modal open onClose={onClose} title={`${row.player_first_name}: session note`}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button type="submit" form="note-form" loading={busy}>Save note</Button></>}>
       <form id="note-form" onSubmit={save} className="space-y-4">
-        <p className="text-sm text-gray-400">{fmtLongDateTime(row.start_time, tz)} · {row.session_type_name}</p>
+        <p className="text-sm text-muted">{fmtLongDateTime(row.start_time, tz)} · {row.session_type_name}</p>
         {error && <Alert tone="error">{error}</Alert>}
         <Segmented value={status} onChange={setStatus} options={[{ value: "completed", label: "Completed" }, { value: "no_show", label: "No-show" }]} />
         <div>
-          <div className="mb-1.5 text-sm font-medium text-gray-200">Skills worked on</div>
+          <div className="mb-1.5 text-sm font-medium text-fg-2">Skills worked on</div>
           <div className="flex flex-wrap gap-1.5">
             {[...new Set([...SKILL_SUGGESTIONS, ...skills])].map((s) => (
               <button type="button" key={s} onClick={() => toggle(s)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${skills.includes(s) ? "border-brand bg-brand text-white" : "border-line text-gray-300 hover:border-gray-500"}`}>
+                className={`rounded-full border px-3 py-1 text-xs font-semibold ${skills.includes(s) ? "border-brand bg-brand text-white" : "border-line text-fg-2 hover:border-faint"}`}>
                 {s}
               </button>
             ))}
@@ -246,7 +246,7 @@ function CoachCancelModal({ row, tz, onClose, onDone }: { row: ScheduleRow | nul
     <Modal open onClose={onClose} title={`Cancel ${row.player_first_name}'s session?`}
       footer={<><Button variant="ghost" onClick={onClose}>Keep</Button><Button variant="danger" loading={busy} onClick={go}>Cancel session</Button></>}>
       <div className="space-y-4">
-        <p className="text-sm text-gray-300">{fmtLongDateTime(row.start_time, tz)} · {row.session_type_name}</p>
+        <p className="text-sm text-fg-2">{fmtLongDateTime(row.start_time, tz)} · {row.session_type_name}</p>
         <Alert>When you cancel, the family always gets their credit back or a full card refund, and an email.</Alert>
         <Field label="Reason (included in the email)">{(id) => <Textarea id={id} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Field closed due to weather" />}</Field>
         {error && <Alert tone="error">{error}</Alert>}

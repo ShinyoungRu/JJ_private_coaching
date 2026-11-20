@@ -5,13 +5,19 @@ import { AGE_GROUPS, type Player, SKILL_LEVELS, type SkillLevel } from "../lib/t
 import { titleCase } from "../lib/format";
 import { Alert, Button, Field, Input, Modal, Select, Textarea } from "./ui";
 
-/** Add / edit a child. Only first name, age group, skill level and notes, by design. */
-export function PlayerFormModal({ open, onClose, player, onSaved }: {
+/**
+ * Add / edit a player: a child, or the account holder themselves (is_self).
+ * Only first name, age group, skill level and notes, by design.
+ * `self` = adding the account holder as an athlete.
+ */
+export function PlayerFormModal({ open, onClose, player, onSaved, self = false }: {
   open: boolean;
   onClose: () => void;
   player?: Player | null;
   onSaved: (p: Player) => void;
+  self?: boolean;
 }) {
+  const isSelf = player ? player.is_self : self;
   const [firstName, setFirstName] = useState("");
   const [ageGroup, setAgeGroup] = useState("");
   const [skill, setSkill] = useState<SkillLevel | "">("");
@@ -22,11 +28,11 @@ export function PlayerFormModal({ open, onClose, player, onSaved }: {
   useEffect(() => {
     if (!open) return;
     setFirstName(player?.first_name ?? "");
-    setAgeGroup(player?.age_group ?? "");
+    setAgeGroup(player?.age_group ?? (self ? "Adult" : ""));
     setSkill(player?.skill_level ?? "");
     setNotes(player?.notes ?? "");
     setError(null);
-  }, [open, player]);
+  }, [open, player, self]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -42,7 +48,7 @@ export function PlayerFormModal({ open, onClose, player, onSaved }: {
       };
       const saved = player
         ? unwrap(await supabase.from("players").update(values).eq("id", player.id).select().single())
-        : unwrap(await supabase.from("players").insert(values).select().single());
+        : unwrap(await supabase.from("players").insert({ ...values, is_self: self }).select().single());
       onSaved(saved);
       onClose();
     } catch (err) {
@@ -56,17 +62,17 @@ export function PlayerFormModal({ open, onClose, player, onSaved }: {
     <Modal
       open={open}
       onClose={onClose}
-      title={player ? `Edit ${player.first_name}` : "Add a player"}
+      title={isSelf ? (player ? "Edit your athlete profile" : "Add yourself as an athlete") : player ? `Edit ${player.first_name}` : "Add a player"}
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button type="submit" form="player-form" loading={saving}>{player ? "Save" : "Add player"}</Button>
+          <Button type="submit" form="player-form" loading={saving}>{player ? "Save" : isSelf ? "Add me" : "Add player"}</Button>
         </>
       }
     >
       <form id="player-form" onSubmit={submit} className="space-y-4">
         {error && <Alert tone="error">{error}</Alert>}
-        <Field label="First name">{(id) => <Input id={id} value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={60} autoFocus required />}</Field>
+        <Field label={isSelf ? "Your first name" : "First name"}>{(id) => <Input id={id} value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={60} autoFocus required />}</Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Age group">
             {(id) => (

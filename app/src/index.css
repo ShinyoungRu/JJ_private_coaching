@@ -1,35 +1,90 @@
 @import "tailwindcss";
 
-/* Brand tokens, matched to www.jjprivatetraining.com (dark #1a1a1a, blue primary, Inter). */
+/* `dark:` utilities follow the .dark class on <html> (set by src/lib/theme.tsx and the
+   inline script in index.html), not just the OS setting, so the header toggle works. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Brand tokens, matched to www.jjprivatetraining.com.
+ * Light: white header, gray-50 page, white cards, blue-600 primary (the live site).
+ * Dark:  the site's own dark palette (shadcn slate: #020817 background, #1e293b borders,
+ *        #3b82f6 primary).
+ * Pages use these semantic names instead of fixed grays, so both themes come from here:
+ *   ink        page background         ink-deep     inset rows inside cards
+ *   panel      card surface            panel-2      subtle fill (chips, active tab track)
+ *   line       borders                 line-soft    card outlines   line-strong  inputs
+ *   fg         headings / strong text  fg-2         body text
+ *   muted      secondary text          subtle       hints           faint        disabled / placeholder
+ *   success / warn / danger  status text      success-soft / danger-soft  status backgrounds
+ * The footer and photo hero keep fixed colors: they look the same in both themes, like the site.
+ */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --color-ink: #1a1a1a;
-  --color-ink-deep: #121212;
-  --color-panel: #222222;
-  --color-panel-2: #2a2a2a;
-  --color-line: #333333;
+
+  --color-ink: #f9fafb;
+  --color-ink-deep: #f9fafb;
+  --color-panel: #ffffff;
+  --color-panel-2: #f3f4f6;
+  --color-line: #e5e7eb;
+  --color-line-soft: #f3f4f6;
+  --color-line-strong: #d1d5db;
+
+  --color-fg: #111827;
+  --color-fg-2: #374151;
+  --color-muted: #4b5563;
+  --color-subtle: #6b7280;
+  --color-faint: #9ca3af;
+
+  --color-success: #059669;
+  --color-success-soft: #d1fae5;
+  --color-warn: #b45309;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fef2f2;
+
   --color-brand: #2563eb;
   --color-brand-hover: #1d4ed8;
   --color-brand-soft: #60a5fa;
 }
 
+.dark {
+  --color-ink: #020817;
+  --color-ink-deep: #0b1222;
+  --color-panel: #0f172a;
+  --color-panel-2: #1e293b;
+  --color-line: #1e293b;
+  --color-line-soft: #1e293b;
+  --color-line-strong: #334155;
+
+  --color-fg: #f8fafc;
+  --color-fg-2: #cbd5e1;
+  --color-muted: #94a3b8;
+  --color-subtle: #8191a7;
+  --color-faint: #64748b;
+
+  --color-success: #34d399;
+  --color-success-soft: rgb(16 185 129 / 0.15);
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+  --color-danger-soft: rgb(239 68 68 / 0.1);
+
+  --color-brand: #3b82f6;
+  --color-brand-hover: #2563eb;
+}
+
 html {
+  color-scheme: light;
+}
+html.dark {
   color-scheme: dark;
 }
 
 body {
-  @apply bg-ink text-gray-100 antialiased;
+  @apply bg-ink text-fg antialiased;
   font-feature-settings: "cv11", "ss01";
 }
 
 ::selection {
-  background: rgb(37 99 235 / 0.45);
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator,
-input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.8);
+  background: rgb(59 130 246 / 0.25);
 }
 
 @keyframes toast-in {
@@ -38,4 +93,15 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 }
 .animate-toast-in {
   animation: toast-in 160ms ease-out;
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-rise-in {
+  animation: rise-in 700ms ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise-in, .animate-toast-in { animation: none; }
 }

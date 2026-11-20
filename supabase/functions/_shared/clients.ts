@@ -33,7 +33,7 @@ export function adminClient(): Admin {
 
 export interface Caller {
   user: User;
-  role: "coach" | "parent";
+  role: "coach" | "client";
   email: string;
   fullName: string | null;
 }

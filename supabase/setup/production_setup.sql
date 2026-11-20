@@ -42,8 +42,8 @@ insert into public.availability (day_of_week, start_time, end_time) values
   (6, '09:00', '13:00');
 
 -- -----------------------------------------------------------------------------
--- 4. Make the coach an admin. The coach must sign up in the app FIRST
---    (https://app.jjprivatetraining.com/login), then run:
+-- 4. Make Jonathan the coach (the app's one admin account). He must sign up in
+--    the app FIRST (https://app.jjprivatetraining.com/login), then run:
 -- -----------------------------------------------------------------------------
 update public.profiles set role = 'coach' where email = '<<COACH_LOGIN_EMAIL>>';
 -- Verify: exactly one row

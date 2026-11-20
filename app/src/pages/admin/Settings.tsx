@@ -37,7 +37,7 @@ export default function Settings() {
       <PageHeader title="Settings" subtitle="Booking rules. Changes apply right away." />
       <form onSubmit={save} className="space-y-6">
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Business</h2>
+          <h2 className="text-lg font-semibold text-fg">Business</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Business name">{(id) => <Input id={id} value={f.business_name} onChange={(e) => setF({ ...f, business_name: e.target.value })} />}</Field>
             <Field label="Time zone" hint="All times are shown in this zone, for everyone.">
@@ -46,7 +46,7 @@ export default function Settings() {
           </div>
         </Card>
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Booking</h2>
+          <h2 className="text-lg font-semibold text-fg">Booking</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Start times every (min)">{(id) => <Input id={id} type="number" min={5} max={240} step={5} value={f.slot_interval_minutes} onChange={num("slot_interval_minutes")} />}</Field>
             <Field label="Minimum notice (hours)" hint="How soon parents can book">{(id) => <Input id={id} type="number" min={0} max={336} value={f.min_booking_notice_hours} onChange={num("min_booking_notice_hours")} />}</Field>
@@ -54,7 +54,7 @@ export default function Settings() {
           </div>
         </Card>
         <Card className="space-y-4">
-          <h2 className="text-lg font-semibold text-white">Cancellations & reminders</h2>
+          <h2 className="text-lg font-semibold text-fg">Cancellations & reminders</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Free cancellation up to (hours before)" hint="Inside this window the session is forfeited.">
               {(id) => <Input id={id} type="number" min={0} max={336} value={f.cancellation_window_hours} onChange={num("cancellation_window_hours")} />}

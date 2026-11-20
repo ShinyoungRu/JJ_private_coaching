@@ -53,7 +53,7 @@ create policy "settings: coach updates"
 -- ---------------------------------------------------------------------------
 grant select on public.profiles to authenticated;
 -- Only these columns are editable from the app (not role, not email).
-grant update (full_name, phone, announcements_opt_in) on public.profiles to authenticated;
+grant update (full_name, phone, announcements_opt_in, client_type) on public.profiles to authenticated;
 
 create policy "profiles: read own, coach reads all"
   on public.profiles for select to authenticated
@@ -70,9 +70,9 @@ create policy "profiles: update own, coach updates all"
 alter table public.players alter column parent_id set default auth.uid();
 
 grant select, delete on public.players to authenticated;
-grant insert (parent_id, first_name, age_group, skill_level, notes, active) on public.players to authenticated;
+grant insert (parent_id, first_name, age_group, skill_level, notes, active, is_self) on public.players to authenticated;
 -- parent_id is deliberately NOT updatable: a player can't be moved to another account.
-grant update (first_name, age_group, skill_level, notes, active) on public.players to authenticated;
+grant update (first_name, age_group, skill_level, notes, active, is_self) on public.players to authenticated;
 
 create policy "players: parent reads own, coach reads all"
   on public.players for select to authenticated

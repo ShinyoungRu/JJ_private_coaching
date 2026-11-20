@@ -141,7 +141,10 @@ npx supabase@2 functions serve --env-file supabase/functions/.env
 - Studio (database UI): http://127.0.0.1:54323
 - Local inbox for auth emails (Mailpit): http://127.0.0.1:54324
 - API: http://127.0.0.1:54321. Functions are at `/functions/v1/<name>`
-- Test logins: `coach@example.com`, `parent.a@example.com`, `parent.b@example.com`. Password `Password123!`
+- Test logins (password `Password123!` for all):
+  - `coach@example.com`: the coach (Jonathan, the app's admin)
+  - `parent.a@example.com`, `parent.b@example.com`: clients signed up as parents
+  - `adult@example.com`: client signed up as an adult athlete (books for themselves)
 
 Then start the web app in a second terminal:
 
@@ -253,9 +256,17 @@ The Stripe account should belong to the coach (payments go to their bank). Give 
 
 The migrations create the pg_cron jobs. They need two Vault secrets, created in step 5 of `production_setup.sql` (`project_url`, and `cron_secret` = the same value as the `CRON_SECRET` function secret). Check them with the queries at the bottom of that file.
 
-### 7. Make the coach an admin
+### 7. Make Jonathan the coach
 
-The coach signs up at `https://app.jjprivatetraining.com/login` like any parent. Then run section 4 of `production_setup.sql`. Roles can only be changed in SQL, never from the app.
+Account types:
+
+| Role | Who | Access |
+|---|---|---|
+| `coach` | Jonathan: the app's one admin (the database allows exactly one) | Everything: dashboard, schedule, prices, settings, all clients |
+| `client` (`client_type = 'parent'`) | Parent or guardian booking for their children | Own account, players, bookings |
+| `client` (`client_type = 'adult'`) | Athlete 18+ booking for themselves | Same as a parent. Gets a "myself" player at signup and can add children too |
+
+Jonathan signs up at `https://app.jjprivatetraining.com/login` like any client. Then run section 4 of `production_setup.sql`. Roles can only be changed in SQL, never from the app.
 
 ---
 

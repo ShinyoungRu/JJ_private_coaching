@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { PlayerFormModal } from "../components/PlayerForm";
+import { PageHero } from "../components/Layout";
 import { PublicBook } from "../components/PublicBook";
 import { SlotPicker } from "../components/SlotPicker";
-import { Alert, Button, buttonClasses, Card, cx, Loading, PageHeader, SectionTitle, Textarea, useToast } from "../components/ui";
-import { ApiError, errorMessage, invoke, unwrap } from "../lib/api";
+import { Alert, Button, buttonClasses, Card, cx, Loading, PageHeader, SectionTitle, SuccessMark, Textarea, useToast } from "../components/ui";
+import { ApiError, errorMessage, invoke, listMyPlayers, unwrap } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { fmtLongDateTime, fmtMoney, hoursUntil } from "../lib/format";
 import { supabase } from "../lib/supabase";
@@ -18,7 +19,10 @@ export default function Book() {
   if (!session) {
     return (
       <>
-        <PageHeader title="Book a session" subtitle="Private and small-group soccer training with JJ Private Training." />
+        <PageHero
+          title="Book Your Next Session"
+          subtitle="Private and small-group soccer training focused on unlocking your full potential on the field. Pick a session to see open times."
+        />
         <PublicBook initialType={params.get("type")} />
       </>
     );
@@ -40,7 +44,7 @@ function BookingFlow() {
   const [params, setParams] = useSearchParams();
 
   const types = useLoad(async () => unwrap(await supabase.from("session_types").select("*").eq("active", true).order("sort_order")), []);
-  const players = useLoad(async () => unwrap(await supabase.from("players").select("*").eq("active", true).order("first_name")), []);
+  const players = useLoad(listMyPlayers, []);
   const credits = useLoad(async () => unwrap(await supabase.from("package_purchases").select("*").gt("sessions_remaining", 0)), []);
 
   const [typeId, setTypeId] = useState<string | null>(params.get("type"));
@@ -140,11 +144,11 @@ function BookingFlow() {
     return (
       <div className="mx-auto max-w-xl">
         <Card className="p-6 text-center sm:p-8">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-3xl text-emerald-300">✓</div>
-          <h1 className="mt-4 text-2xl font-bold text-white">You're booked!</h1>
-          <p className="mt-2 text-gray-300">{player.first_name} · {type.name}</p>
-          <p className="mt-1 font-semibold text-white">{fmtLongDateTime(booked.start_time, tz)}</p>
-          <p className="mt-3 text-sm text-gray-400">A confirmation email is on its way. Paid with a package credit.</p>
+          <SuccessMark />
+          <h1 className="mt-4 text-2xl font-bold text-fg">You're booked!</h1>
+          <p className="mt-2 text-fg-2">{player.first_name} · {type.name}</p>
+          <p className="mt-1 font-semibold text-fg">{fmtLongDateTime(booked.start_time, tz)}</p>
+          <p className="mt-3 text-sm text-muted">A confirmation email is on its way. Paid with a package credit.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <Link to="/bookings" className={buttonClasses()}>View my bookings</Link>
             <Button variant="secondary" onClick={() => { setBooked(null); setSlot(null); setNote(""); setRefreshKey((k) => k + 1); }}>Book another</Button>
@@ -162,7 +166,7 @@ function BookingFlow() {
 
       {isCoach && (
         <Alert className="mb-6">
-          You're viewing the calendar as the coach. To book for a family, use <Link to="/admin" className="font-semibold underline">Dashboard → New booking</Link>.
+          You're viewing the calendar as the coach. To book for a client, use <Link to="/admin" className="font-semibold underline">Dashboard → New booking</Link>.
         </Alert>
       )}
 
@@ -179,14 +183,14 @@ function BookingFlow() {
                   onClick={() => chooseType(t.id)}
                   aria-pressed={typeId === t.id}
                   className={cx("rounded-2xl border p-5 text-left transition-colors",
-                    typeId === t.id ? "border-brand bg-brand/10" : "border-line bg-panel hover:border-gray-500")}
+                    typeId === t.id ? "border-brand bg-brand/10" : "border-line bg-panel hover:border-faint")}
                 >
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-lg font-bold text-white">{t.name}</span>
-                    <span className="font-bold text-white">{fmtMoney(t.price_cents, settings?.currency)}</span>
+                    <span className="text-lg font-bold text-fg">{t.name}</span>
+                    <span className="font-bold text-fg">{fmtMoney(t.price_cents, settings?.currency)}</span>
                   </div>
-                  <div className="mt-1 text-sm text-gray-400">{t.duration_minutes} min{t.max_players > 1 ? ` · up to ${t.max_players} players` : " · private"}</div>
-                  {t.description && <p className="mt-2 text-sm text-gray-300">{t.description}</p>}
+                  <div className="mt-1 text-sm text-muted">{t.duration_minutes} min{t.max_players > 1 ? ` · up to ${t.max_players} players` : " · private"}</div>
+                  {t.description && <p className="mt-2 text-sm text-fg-2">{t.description}</p>}
                 </button>
               ))}
             </div>
@@ -198,7 +202,7 @@ function BookingFlow() {
             <SectionTitle>2. Who's training?</SectionTitle>
             {players.data!.length === 0 ? (
               <Card>
-                <p className="text-gray-300">Add your player first. Just a first name, age group and level.</p>
+                <p className="text-fg-2">Add who's training first: yourself, or a child. Just a first name, age group and level.</p>
                 <Button className="mt-4" onClick={() => setAddingPlayer(true)}>+ Add a player</Button>
               </Card>
             ) : (
@@ -209,12 +213,13 @@ function BookingFlow() {
                     onClick={() => setPlayerId(p.id)}
                     aria-pressed={playerId === p.id}
                     className={cx("rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors",
-                      playerId === p.id ? "border-brand bg-brand text-white" : "border-line bg-panel text-gray-200 hover:border-gray-500")}
+                      playerId === p.id ? "border-brand bg-brand text-white" : "border-line bg-panel text-fg-2 hover:border-faint")}
                   >
-                    {p.first_name}{p.age_group && <span className="ml-1.5 font-normal opacity-75">{p.age_group}</span>}
+                    {p.is_self ? `${p.first_name} (you)` : p.first_name}
+                    {p.age_group && !p.is_self && <span className="ml-1.5 font-normal opacity-75">{p.age_group}</span>}
                   </button>
                 ))}
-                <button onClick={() => setAddingPlayer(true)} className="rounded-xl border border-dashed border-line px-4 py-2.5 text-sm font-semibold text-gray-400 hover:border-gray-500 hover:text-gray-200">
+                <button onClick={() => setAddingPlayer(true)} className="rounded-xl border border-dashed border-line px-4 py-2.5 text-sm font-semibold text-muted hover:border-faint hover:text-fg">
                   + Add player
                 </button>
               </div>
@@ -243,12 +248,12 @@ function BookingFlow() {
             <SectionTitle>4. Confirm</SectionTitle>
             <Card className="space-y-5">
               <div>
-                <div className="text-sm text-gray-400">{player.first_name} · {type.name}</div>
-                <div className="text-xl font-bold text-white">{fmtLongDateTime(slot.slot_start, tz)}</div>
+                <div className="text-sm text-muted">{player.first_name} · {type.name}</div>
+                <div className="text-xl font-bold text-fg">{fmtLongDateTime(slot.slot_start, tz)}</div>
               </div>
 
               <fieldset className="space-y-2">
-                <legend className="mb-2 text-sm font-medium text-gray-200">Payment</legend>
+                <legend className="mb-2 text-sm font-medium text-fg-2">Payment</legend>
                 {usableCount > 0 && (
                   <PayOption checked={payWith === "package"} onChange={() => setPayWith("package")}
                     title="Use a package credit" detail={`${usableCount} credit${usableCount === 1 ? "" : "s"} available`} />
@@ -256,18 +261,18 @@ function BookingFlow() {
                 <PayOption checked={payWith === "card"} onChange={() => setPayWith("card")}
                   title={`Pay ${fmtMoney(type.price_cents, settings?.currency)} by card`} detail="Secure checkout with Stripe" />
                 {usableCount === 0 && (
-                  <p className="text-xs text-gray-500">Training often? <Link to="/packages" className="text-brand-soft hover:underline">Packages</Link> save money per session.</p>
+                  <p className="text-xs text-subtle">Training often? <Link to="/packages" className="text-brand hover:underline">Packages</Link> save money per session.</p>
                 )}
               </fieldset>
 
               <div>
-                <label htmlFor="note" className="mb-1.5 block text-sm font-medium text-gray-200">Anything the coach should know? (optional)</label>
+                <label htmlFor="note" className="mb-1.5 block text-sm font-medium text-fg-2">Anything the coach should know? (optional)</label>
                 <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} rows={2} placeholder="e.g. wants to work on shooting with the left foot" />
               </div>
 
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-subtle">
                 You can cancel or reschedule up to {windowHours} hours before the session.
-                {hoursUntil(slot.slot_start) < windowHours && <strong className="text-amber-300"> This session is less than {windowHours} hours away, so it can't be cancelled for a refund.</strong>}
+                {hoursUntil(slot.slot_start) < windowHours && <strong className="text-warn"> This session is less than {windowHours} hours away, so it can't be cancelled for a refund.</strong>}
               </p>
 
               {error && <Alert tone="error">{error}</Alert>}
@@ -291,11 +296,11 @@ function BookingFlow() {
 function PayOption({ checked, onChange, title, detail }: { checked: boolean; onChange: () => void; title: string; detail: string }) {
   return (
     <label className={cx("flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition-colors",
-      checked ? "border-brand bg-brand/10" : "border-line hover:border-gray-500")}>
+      checked ? "border-brand bg-brand/10" : "border-line hover:border-faint")}>
       <input type="radio" name="pay" checked={checked} onChange={onChange} className="h-4 w-4 accent-brand" />
       <span>
-        <span className="block font-semibold text-white">{title}</span>
-        <span className="block text-sm text-gray-400">{detail}</span>
+        <span className="block font-semibold text-fg">{title}</span>
+        <span className="block text-sm text-muted">{detail}</span>
       </span>
     </label>
   );

@@ -24,6 +24,9 @@ export type PaymentMethod = E["payment_method"];
 export type PaymentStatus = E["payment_status"];
 export type SkillLevel = E["skill_level"];
 export type InquiryStatus = E["inquiry_status"];
+export type ClientType = E["client_type"];
+
+export const CLIENT_TYPE_LABEL: Record<ClientType, string> = { parent: "Parent / guardian", adult: "Adult athlete" };
 
 export type Slot = F["get_available_slots"]["Returns"][number];
 export type ScheduleRow = F["admin_schedule"]["Returns"][number];

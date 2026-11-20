@@ -19,9 +19,9 @@ export default function ResetPassword() {
     return (
       <div className="mx-auto max-w-md">
         <Card>
-          <h1 className="text-xl font-bold text-white">This link has expired</h1>
-          <p className="mt-2 text-sm text-gray-400">Password reset links work once and expire after an hour.</p>
-          <Link to="/login?mode=forgot" className="mt-5 inline-block font-semibold text-brand-soft hover:underline">Send a new link →</Link>
+          <h1 className="text-xl font-bold text-fg">This link has expired</h1>
+          <p className="mt-2 text-sm text-muted">Password reset links work once and expire after an hour.</p>
+          <Link to="/login?mode=forgot" className="mt-5 inline-block font-semibold text-brand hover:underline">Send a new link →</Link>
         </Card>
       </div>
     );
@@ -49,7 +49,7 @@ export default function ResetPassword() {
   return (
     <div className="mx-auto max-w-md">
       <Card className="p-6 sm:p-8">
-        <h1 className="text-2xl font-bold text-white">Choose a new password</h1>
+        <h1 className="text-2xl font-bold text-fg">Choose a new password</h1>
         <form onSubmit={submit} className="mt-6 space-y-4">
           {error && <Alert tone="error">{error}</Alert>}
           <Field label="New password" hint="At least 8 characters, letters and numbers.">

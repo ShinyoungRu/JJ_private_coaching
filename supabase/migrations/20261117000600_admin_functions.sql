@@ -146,7 +146,7 @@ begin
       where b.start_time >= now() - interval '60 days'
         and b.status in ('booked', 'completed', 'no_show')),
     'total_families', (
-      select count(*) from public.profiles where role = 'parent'),
+      select count(*) from public.profiles where role = 'client'),
     'new_inquiries', (
       select count(*) from public.inquiries where status = 'new'),
     'unpaid_manual_bookings', (

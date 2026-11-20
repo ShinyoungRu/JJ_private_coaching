@@ -10,8 +10,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Long-lived vendor chunks: cached by browsers across app deploys.
+        // "react-dom/client" is a separate entry from "react-dom"; without it the renderer
+        // (~180 KB) lands in the app chunk and is re-downloaded on every deploy.
         manualChunks: {
-          react: ["react", "react-dom", "react-router"],
+          react: ["react", "react-dom", "react-dom/client", "react-router"],
           supabase: ["@supabase/supabase-js"],
         },
       },

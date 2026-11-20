@@ -2,10 +2,11 @@
 -- LOCAL TEST DATA ONLY. Runs on `supabase db reset` (never on production
 -- `supabase db push`).
 --
--- Logins (password for all three: Password123!)
---   coach@example.com      -> coach
---   parent.a@example.com   -> parent with 2 players (Mia, Leo) + package credits
---   parent.b@example.com   -> parent with 1 player (Sam)
+-- Logins (password for all: Password123!)
+--   coach@example.com      -> coach (Jonathan: the app's one admin)
+--   parent.a@example.com   -> client, parent with 2 players (Mia, Leo) + package credits
+--   parent.b@example.com   -> client, parent with 1 player (Sam)
+--   adult@example.com      -> client, adult athlete training themselves (Jordan)
 --
 -- Prices below are PLACEHOLDERS for testing.
 -- =============================================================================
@@ -22,24 +23,26 @@ insert into auth.users (
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', u.email,
        extensions.crypt('Password123!', extensions.gen_salt('bf')), now(),
        '{"provider":"email","providers":["email"]}'::jsonb,
-       jsonb_build_object('full_name', u.full_name, 'phone', u.phone),
+       jsonb_build_object('full_name', u.full_name, 'phone', u.phone, 'account_type', u.account_type),
        now() - interval '30 days', now(),
        '', '', '', '', '', '', '', ''
 from (values
-  ('a0000000-0000-4000-8000-000000000001'::uuid, 'coach@example.com',    'Coach Jonathan', '(484) 555-0100'),
-  ('a0000000-0000-4000-8000-000000000002'::uuid, 'parent.a@example.com', 'Alex Parker',    '(610) 555-0101'),
-  ('a0000000-0000-4000-8000-000000000003'::uuid, 'parent.b@example.com', 'Blair Rivera',   '(610) 555-0102')
-) as u(id, email, full_name, phone);
+  ('a0000000-0000-4000-8000-000000000001'::uuid, 'coach@example.com',     'Coach Jonathan', '(484) 555-0100', 'parent'),
+  ('a0000000-0000-4000-8000-000000000002'::uuid, 'parent.a@example.com',  'Alex Parker',    '(610) 555-0101', 'parent'),
+  ('a0000000-0000-4000-8000-000000000003'::uuid, 'parent.b@example.com',  'Blair Rivera',   '(610) 555-0102', 'parent'),
+  ('a0000000-0000-4000-8000-000000000005'::uuid, 'adult@example.com',     'Jordan Lee',     '(610) 555-0104', 'adult')
+) as u(id, email, full_name, phone, account_type);
 
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 select gen_random_uuid(), u.id, u.id::text,
        jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
        'email', now(), now(), now()
 from auth.users u
-where u.id in ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000003');
+where u.email like '%@example.com';
 
 -- Promote the coach (this is how you do it in production too, see README).
 update public.profiles set role = 'coach' where id = 'a0000000-0000-4000-8000-000000000001';
+-- adult@example.com got its "myself" player (Jordan) from the signup trigger.
 
 -- ---------------------------------------------------------------------------
 -- Players (children)

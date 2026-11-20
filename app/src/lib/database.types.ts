@@ -251,14 +251,14 @@ isOneToOne: false
                   ]
                 },"players": {
                   Row: {
-                    "active": boolean,"age_group": string | null,"created_at": string,"first_name": string,"id": string,"notes": string | null,"parent_id": string,"skill_level": Database["public"]['Enums']["skill_level"] | null,"updated_at": string
+                    "active": boolean,"age_group": string | null,"created_at": string,"first_name": string,"id": string,"is_self": boolean,"notes": string | null,"parent_id": string,"skill_level": Database["public"]['Enums']["skill_level"] | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "active"?: boolean,"age_group"?: string | null,"created_at"?: string,"first_name": string,"id"?: string,"notes"?: string | null,"parent_id"?: string,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"updated_at"?: string
+                    "active"?: boolean,"age_group"?: string | null,"created_at"?: string,"first_name": string,"id"?: string,"is_self"?: boolean,"notes"?: string | null,"parent_id"?: string,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"updated_at"?: string
                   }
                   Update: {
-                    "active"?: boolean,"age_group"?: string | null,"created_at"?: string,"first_name"?: string,"id"?: string,"notes"?: string | null,"parent_id"?: string,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"updated_at"?: string
+                    "active"?: boolean,"age_group"?: string | null,"created_at"?: string,"first_name"?: string,"id"?: string,"is_self"?: boolean,"notes"?: string | null,"parent_id"?: string,"skill_level"?: Database["public"]['Enums']["skill_level"] | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -271,14 +271,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "announcements_opt_in": boolean,"created_at": string,"email": string | null,"full_name": string | null,"id": string,"phone": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
+                    "announcements_opt_in": boolean,"client_type": Database["public"]['Enums']["client_type"],"created_at": string,"email": string | null,"full_name": string | null,"id": string,"phone": string | null,"role": Database["public"]['Enums']["app_role"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "announcements_opt_in"?: boolean,"created_at"?: string,"email"?: string | null,"full_name"?: string | null,"id": string,"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
+                    "announcements_opt_in"?: boolean,"client_type"?: Database["public"]['Enums']["client_type"],"created_at"?: string,"email"?: string | null,"full_name"?: string | null,"id": string,"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
                   }
                   Update: {
-                    "announcements_opt_in"?: boolean,"created_at"?: string,"email"?: string | null,"full_name"?: string | null,"id"?: string,"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
+                    "announcements_opt_in"?: boolean,"client_type"?: Database["public"]['Enums']["client_type"],"created_at"?: string,"email"?: string | null,"full_name"?: string | null,"id"?: string,"phone"?: string | null,"role"?: Database["public"]['Enums']["app_role"],"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -611,7 +611,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "app_role": "coach"|"parent","booking_status": "pending_payment"|"booked"|"cancelled"|"completed"|"no_show","inquiry_status": "new"|"replied"|"closed","payment_method": "stripe"|"package"|"manual","payment_status": "unpaid"|"paid"|"refunded","skill_level": "beginner"|"intermediate"|"advanced"|"elite"
+            "app_role": "coach"|"client","booking_status": "pending_payment"|"booked"|"cancelled"|"completed"|"no_show","client_type": "parent"|"adult","inquiry_status": "new"|"replied"|"closed","payment_method": "stripe"|"package"|"manual","payment_status": "unpaid"|"paid"|"refunded","skill_level": "beginner"|"intermediate"|"advanced"|"elite"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -727,7 +727,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "app_role": ["coach", "parent"],"booking_status": ["pending_payment", "booked", "cancelled", "completed", "no_show"],"inquiry_status": ["new", "replied", "closed"],"payment_method": ["stripe", "package", "manual"],"payment_status": ["unpaid", "paid", "refunded"],"skill_level": ["beginner", "intermediate", "advanced", "elite"]
+            "app_role": ["coach", "client"],"booking_status": ["pending_payment", "booked", "cancelled", "completed", "no_show"],"client_type": ["parent", "adult"],"inquiry_status": ["new", "replied", "closed"],"payment_method": ["stripe", "package", "manual"],"payment_status": ["unpaid", "paid", "refunded"],"skill_level": ["beginner", "intermediate", "advanced", "elite"]
           }
         }
 } as const
