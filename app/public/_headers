@@ -1,0 +1,30 @@
+# Copy into the FRONTEND build output folder (e.g. public/_headers for Vite).
+# Netlify MERGES headers from every matching rule, so frame rules are listed per route.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+/book*
+  Content-Security-Policy: frame-ancestors 'self' https://www.jjprivatetraining.com https://jjprivatetraining.com
+/embed/*
+  Content-Security-Policy: frame-ancestors 'self' https://www.jjprivatetraining.com https://jjprivatetraining.com
+
+/
+  Content-Security-Policy: frame-ancestors 'self'
+/login*
+  Content-Security-Policy: frame-ancestors 'self'
+/account*
+  Content-Security-Policy: frame-ancestors 'self'
+/bookings*
+  Content-Security-Policy: frame-ancestors 'self'
+/booking/*
+  Content-Security-Policy: frame-ancestors 'self'
+/packages*
+  Content-Security-Policy: frame-ancestors 'self'
+/players*
+  Content-Security-Policy: frame-ancestors 'self'
+/admin*
+  Content-Security-Policy: frame-ancestors 'self'
+/reset-password*
+  Content-Security-Policy: frame-ancestors 'self'

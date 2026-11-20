@@ -1,0 +1,78 @@
+<!--
+  "Next available sessions" widget for www.jjprivatetraining.com
+  Paste this whole block where the widget should appear.
+  1. Replace YOUR-PROJECT-REF below with the Supabase project ref of the APP project.
+  2. Optional: data-limit (how many times to show) and data-type (a session type id).
+  Shows only dates/times. No customer data is ever returned by this endpoint.
+-->
+<div id="jj-next-sessions" data-limit="4" data-type="">
+  <p class="jj-ns-loading">Loading open times...</p>
+</div>
+
+<style>
+  #jj-next-sessions { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #f9fafb; background: #1a1a1a; border: 1px solid #2d2d2d; border-radius: 16px; padding: 20px; max-width: 520px; }
+  #jj-next-sessions h3 { margin: 0 0 12px; font-size: 18px; font-weight: 700; }
+  #jj-next-sessions ul { list-style: none; margin: 0 0 16px; padding: 0; }
+  #jj-next-sessions li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #2d2d2d; }
+  #jj-next-sessions li:last-child { border-bottom: 0; }
+  #jj-next-sessions .jj-ns-when { font-weight: 600; }
+  #jj-next-sessions .jj-ns-type { color: #9ca3af; font-size: 13px; }
+  #jj-next-sessions a.jj-ns-book { color: #fff; background: #2563eb; border-radius: 8px; padding: 6px 12px; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+  #jj-next-sessions a.jj-ns-book:hover { background: #1d4ed8; }
+  #jj-next-sessions a.jj-ns-all { display: inline-block; color: #60a5fa; font-weight: 600; text-decoration: none; }
+  #jj-next-sessions .jj-ns-loading, #jj-next-sessions .jj-ns-empty { color: #9ca3af; margin: 0; }
+</style>
+
+<script>
+(function () {
+  var FUNCTIONS_URL = "https://YOUR-PROJECT-REF.supabase.co/functions/v1";
+  var APP_URL = "https://app.jjprivatetraining.com";
+
+  var root = document.getElementById("jj-next-sessions");
+  if (!root) return;
+  var limit = parseInt(root.getAttribute("data-limit") || "4", 10);
+  var type = root.getAttribute("data-type") || "";
+  var url = FUNCTIONS_URL + "/public-availability?limit=" + encodeURIComponent(limit) +
+            (type ? "&session_type_id=" + encodeURIComponent(type) : "");
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text; // textContent = no HTML injection
+    return n;
+  }
+
+  fetch(url)
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (data) {
+      root.innerHTML = "";
+      root.appendChild(el("h3", null, "Next available sessions"));
+      if (!data.slots || !data.slots.length) {
+        root.appendChild(el("p", "jj-ns-empty", "No open times right now. Check back soon!"));
+      } else {
+        var ul = el("ul");
+        data.slots.forEach(function (s) {
+          var li = el("li");
+          var info = el("div");
+          info.appendChild(el("div", "jj-ns-when", s.display_date + " · " + s.display_time));
+          info.appendChild(el("div", "jj-ns-type", s.session_type));
+          var a = el("a", "jj-ns-book", "Book");
+          a.href = APP_URL + "/book?type=" + encodeURIComponent(s.session_type_id);
+          li.appendChild(info);
+          li.appendChild(a);
+          ul.appendChild(li);
+        });
+        root.appendChild(ul);
+      }
+      var all = el("a", "jj-ns-all", "See full calendar →");
+      all.href = APP_URL + "/book";
+      root.appendChild(all);
+    })
+    .catch(function () {
+      root.innerHTML = "";
+      var a = el("a", "jj-ns-all", "Book a session →");
+      a.href = APP_URL + "/book";
+      root.appendChild(a);
+    });
+})();
+</script>

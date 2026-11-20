@@ -1,0 +1,89 @@
+<!--
+  Contact form for www.jjprivatetraining.com -> saves to the app's
+  "inquiries" table and emails the coach.
+  1. Replace YOUR-PROJECT-REF below.
+  2. Keep the hidden "website" field: it's the spam honeypot. Humans never see it.
+  Works with JavaScript (inline success message) and without it (plain form
+  post that redirects back to /contact?sent=1).
+-->
+<form id="jj-contact" method="post"
+      action="https://YOUR-PROJECT-REF.supabase.co/functions/v1/contact-form" novalidate>
+  <input type="hidden" name="_redirect" value="https://www.jjprivatetraining.com/contact?sent=1">
+
+  <label>Your name
+    <input name="name" type="text" maxlength="120" autocomplete="name" required>
+  </label>
+  <label>Email
+    <input name="email" type="email" maxlength="254" autocomplete="email" required>
+  </label>
+  <label>Phone (optional)
+    <input name="phone" type="tel" maxlength="30" autocomplete="tel">
+  </label>
+  <label>Message
+    <textarea name="message" rows="5" maxlength="5000" required></textarea>
+  </label>
+
+  <!-- Honeypot: hidden from people, bots fill it in. Do not remove. -->
+  <div aria-hidden="true" style="position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden">
+    <label>Leave this empty <input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+  </div>
+
+  <button type="submit">Send message</button>
+  <p id="jj-contact-status" role="status" aria-live="polite"></p>
+</form>
+
+<style>
+  #jj-contact { display: grid; gap: 14px; max-width: 560px; font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  #jj-contact label { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+  #jj-contact input, #jj-contact textarea { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; }
+  #jj-contact button { justify-self: start; background: #2563eb; color: #fff; border: 0; border-radius: 8px; padding: 12px 22px; font-weight: 600; cursor: pointer; }
+  #jj-contact button[disabled] { opacity: .6; cursor: default; }
+  #jj-contact-status { margin: 0; font-size: 14px; }
+  #jj-contact-status.ok { color: #15803d; }
+  #jj-contact-status.err { color: #b91c1c; }
+</style>
+
+<script>
+(function () {
+  var form = document.getElementById("jj-contact");
+  var status = document.getElementById("jj-contact-status");
+  if (!form) return;
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var data = Object.fromEntries(new FormData(form).entries());
+    delete data._redirect;
+    if (!data.name || !data.email || !data.message) {
+      status.className = "err";
+      status.textContent = "Please fill in your name, email and message.";
+      return;
+    }
+    var btn = form.querySelector("button");
+    btn.disabled = true;
+    status.className = "";
+    status.textContent = "Sending...";
+
+    fetch(form.action, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    })
+      .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+      .then(function (res) {
+        if (res.ok) {
+          form.reset();
+          status.className = "ok";
+          status.textContent = "Thanks! Your message was sent. We'll get back to you soon.";
+        } else {
+          status.className = "err";
+          status.textContent = (res.body && res.body.error && res.body.error.message) || "Something went wrong. Please try again.";
+        }
+      })
+      .catch(function () {
+        status.className = "err";
+        status.textContent = "Network error. Please email jjprivatetraining@gmail.com instead.";
+      })
+      .finally(function () { btn.disabled = false; });
+  });
+})();
+</script>
