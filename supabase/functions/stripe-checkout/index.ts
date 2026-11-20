@@ -2,7 +2,8 @@
 //
 // Single session:
 //   { "kind": "session", "session_type_id": "...", "player_id": "...",
-//     "start_time": "2026-12-01T22:00:00Z", "parent_note": "optional" }
+//     "start_time": "2026-12-01T22:00:00Z", "hours": 1, "parent_note": "optional" }
+//   hours (default 1): back-to-back private sessions; price = hourly price x hours.
 //   -> holds the slot (status pending_payment) and returns { url } for Stripe Checkout.
 //
 // Package:
@@ -23,6 +24,7 @@ import {
   errorResponse,
   HttpError,
   json,
+  optionalHours,
   readJson,
   requireDate,
   requireUuid,
@@ -50,6 +52,7 @@ Deno.serve(async (req) => {
       const playerId = requireUuid(body.player_id, "player_id");
       const start = requireDate(body.start_time, "start_time");
       const note = cleanText(body.parent_note, 500);
+      const hours = optionalHours(body.hours);
 
       const { data: booking, error } = await admin.rpc("create_pending_booking", {
         p_actor: caller.user.id,
@@ -57,6 +60,7 @@ Deno.serve(async (req) => {
         p_session_type_id: sessionTypeId,
         p_start: start,
         p_parent_note: note,
+        p_hours: hours,
       });
       if (error) throw dbError(error);
 
@@ -90,7 +94,7 @@ Deno.serve(async (req) => {
               currency: settings.currency,
               unit_amount: booking.price_cents,
               product_data: {
-                name: `${st?.name ?? "Training session"} - ${player?.first_name ?? "Player"}`,
+                name: `${st?.name ?? "Training session"}${hours > 1 ? ` (${hours} hours)` : ""} - ${player?.first_name ?? "Player"}`,
                 description: formatWhen(booking.start_time, settings.timezone),
               },
             },

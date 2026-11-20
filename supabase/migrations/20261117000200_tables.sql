@@ -157,6 +157,10 @@ create table public.bookings (
   parent_id                   uuid not null references public.profiles (id) on delete restrict,
   start_time                  timestamptz not null,
   end_time                    timestamptz not null,
+  -- Length in sessions (= hours, since sessions are 1 hour). Default 1; private
+  -- sessions can be booked longer (up to app_settings.max_booking_hours).
+  -- Price and package credits scale with it.
+  hours                       integer not null default 1 check (hours between 1 and 8),
   status                      public.booking_status not null default 'booked',
   paid_with                   public.payment_method not null,
   payment_status              public.payment_status not null default 'unpaid',

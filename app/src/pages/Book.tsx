@@ -3,11 +3,11 @@ import { Link, useSearchParams } from "react-router";
 import { PlayerFormModal } from "../components/PlayerForm";
 import { PageHero } from "../components/Layout";
 import { PublicBook } from "../components/PublicBook";
-import { SlotPicker } from "../components/SlotPicker";
+import { HoursPicker, maxHoursFor, SlotPicker } from "../components/SlotPicker";
 import { Alert, Button, buttonClasses, Card, cx, Loading, PageHeader, SectionTitle, SuccessMark, Textarea, useToast } from "../components/ui";
 import { ApiError, errorMessage, invoke, listMyPlayers, unwrap } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { fmtLongDateTime, fmtMoney, hoursUntil } from "../lib/format";
+import { fmtLongDateTime, fmtMoney, fmtTime, hoursUntil, plural } from "../lib/format";
 import { supabase } from "../lib/supabase";
 import type { Booking, PackagePurchase, Player, SessionType, Slot } from "../lib/types";
 import { useLoad } from "../lib/useLoad";
@@ -30,9 +30,10 @@ export default function Book() {
   return <BookingFlow />;
 }
 
-function matchingCredits(credits: PackagePurchase[], typeId: string, slotStart: string): PackagePurchase[] {
+/** Packages that can pay for this booking: one credit per hour, all from the same package. */
+function matchingCredits(credits: PackagePurchase[], typeId: string, slotStart: string, hours: number): PackagePurchase[] {
   return credits.filter((c) =>
-    c.sessions_remaining > 0 &&
+    c.sessions_remaining >= hours &&
     (c.session_type_id === null || c.session_type_id === typeId) &&
     (c.expires_at === null || new Date(c.expires_at) > new Date(slotStart))
   );
@@ -50,6 +51,7 @@ function BookingFlow() {
   const [typeId, setTypeId] = useState<string | null>(params.get("type"));
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
+  const [hours, setHours] = useState(1);
   const [payWith, setPayWith] = useState<"package" | "card">("card");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -87,9 +89,10 @@ function BookingFlow() {
 
   const type: SessionType | undefined = types.data?.find((t) => t.id === typeId);
   const player: Player | undefined = players.data?.find((p) => p.id === playerId);
+  const maxHours = maxHoursFor(type, settings);
   const usable = useMemo(
-    () => (type && slot ? matchingCredits(credits.data ?? [], type.id, slot.slot_start) : []),
-    [credits.data, type, slot],
+    () => (type && slot ? matchingCredits(credits.data ?? [], type.id, slot.slot_start, hours) : []),
+    [credits.data, type, slot, hours],
   );
   const usableCount = usable.reduce((n, c) => n + c.sessions_remaining, 0);
 
@@ -101,6 +104,7 @@ function BookingFlow() {
   function chooseType(id: string) {
     setTypeId(id);
     setSlot(null);
+    setHours(1);
     const p = new URLSearchParams(params);
     p.set("type", id);
     setParams(p, { replace: true });
@@ -113,13 +117,13 @@ function BookingFlow() {
     try {
       if (payWith === "package") {
         const res = await invoke<{ booking: Booking }>("booking-actions", {
-          action: "book_with_package", session_type_id: type.id, player_id: player.id, start_time: slot.slot_start, parent_note: note,
+          action: "book_with_package", session_type_id: type.id, player_id: player.id, start_time: slot.slot_start, hours, parent_note: note,
         });
         setBooked(res.booking);
         credits.reload();
       } else {
         const res = await invoke<{ url: string }>("stripe-checkout", {
-          kind: "session", session_type_id: type.id, player_id: player.id, start_time: slot.slot_start, parent_note: note,
+          kind: "session", session_type_id: type.id, player_id: player.id, start_time: slot.slot_start, hours, parent_note: note,
         });
         // Stripe Checkout can't run inside an iframe: always use the top window.
         (window.top ?? window).location.href = res.url;
@@ -229,10 +233,12 @@ function BookingFlow() {
 
         {type && (
           <section>
-            <SectionTitle hint={`${type.duration_minutes} min`}>{isCoach ? "2" : "3"}. Pick a time</SectionTitle>
+            <SectionTitle hint={maxHours > 1 ? "1-hour sessions, back to back" : `${type.duration_minutes} min`}>{isCoach ? "2" : "3"}. Pick a time</SectionTitle>
             <Card className="p-3 sm:p-5">
+              <HoursPicker value={hours} max={maxHours} onChange={(h) => { setHours(h); setSlot(null); }} />
               <SlotPicker
                 sessionTypeId={type.id}
+                hours={hours}
                 tz={tz}
                 maxDaysAhead={settings?.max_booking_days_ahead ?? 60}
                 selected={slot?.slot_start}
@@ -248,18 +254,21 @@ function BookingFlow() {
             <SectionTitle>4. Confirm</SectionTitle>
             <Card className="space-y-5">
               <div>
-                <div className="text-sm text-muted">{player.first_name} · {type.name}</div>
+                <div className="text-sm text-muted">{player.first_name} · {type.name} · {plural(hours, "hour")}</div>
                 <div className="text-xl font-bold text-fg">{fmtLongDateTime(slot.slot_start, tz)}</div>
+                <div className="text-sm text-muted">until {fmtTime(slot.slot_end, tz)}</div>
               </div>
 
               <fieldset className="space-y-2">
                 <legend className="mb-2 text-sm font-medium text-fg-2">Payment</legend>
                 {usableCount > 0 && (
                   <PayOption checked={payWith === "package"} onChange={() => setPayWith("package")}
-                    title="Use a package credit" detail={`${usableCount} credit${usableCount === 1 ? "" : "s"} available`} />
+                    title={hours > 1 ? `Use ${hours} package credits` : "Use a package credit"}
+                    detail={`${plural(usableCount, "credit")} available`} />
                 )}
                 <PayOption checked={payWith === "card"} onChange={() => setPayWith("card")}
-                  title={`Pay ${fmtMoney(type.price_cents, settings?.currency)} by card`} detail="Secure checkout with Stripe" />
+                  title={`Pay ${fmtMoney(type.price_cents * hours, settings?.currency)} by card`}
+                  detail={hours > 1 ? `${fmtMoney(type.price_cents, settings?.currency)} x ${hours} hours · secure checkout with Stripe` : "Secure checkout with Stripe"} />
                 {usableCount === 0 && (
                   <p className="text-xs text-subtle">Training often? <Link to="/packages" className="text-brand hover:underline">Packages</Link> save money per session.</p>
                 )}

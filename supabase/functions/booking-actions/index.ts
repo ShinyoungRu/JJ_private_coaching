@@ -4,11 +4,12 @@
 // (This function is not in the original list of seven. Booking with a
 // package credit, cancelling and rescheduling all need it.)
 //
-//   { "action": "book_with_package", "session_type_id", "player_id", "start_time", "parent_note"? }
+//   { "action": "book_with_package", "session_type_id", "player_id", "start_time", "hours"?, "parent_note"? }
+//     hours (default 1) uses one package credit per hour.
 //   { "action": "cancel",     "booking_id", "reason"? }
 //   { "action": "reschedule", "booking_id", "new_start_time" }
 //   coach only:
-//   { "action": "admin_create_booking", "player_id", "session_type_id", "start_time",
+//   { "action": "admin_create_booking", "player_id", "session_type_id", "start_time", "hours"?,
 //     "use_package"?: bool, "override_availability"?: bool, "note"?: str, "notify_parent"?: bool }
 //
 // Cancellation policy (enforced in the database, cancel_booking()):
@@ -27,6 +28,7 @@ import {
   errorResponse,
   HttpError,
   json,
+  optionalHours,
   readJson,
   requireDate,
   requireUuid,
@@ -66,6 +68,7 @@ Deno.serve(async (req) => {
           p_session_type_id: requireUuid(body.session_type_id, "session_type_id"),
           p_start: requireDate(body.start_time, "start_time"),
           p_parent_note: cleanText(body.parent_note, 500),
+          p_hours: optionalHours(body.hours),
         });
         if (error) throw dbError(error);
         await notifyBookingConfirmed(admin, booking.id);
@@ -156,6 +159,7 @@ Deno.serve(async (req) => {
           p_use_package: body.use_package === true,
           p_override_availability: body.override_availability === true,
           p_note: cleanText(body.note, 500),
+          p_hours: optionalHours(body.hours),
         });
         if (error) throw dbError(error);
         if (body.notify_parent !== false) await notifyBookingConfirmed(admin, booking.id);

@@ -96,22 +96,26 @@ supabase.from("app_settings").select("*").single(); // timezone, cancellation_wi
 ```js
 const { data: slots } = await supabase.rpc("get_available_slots", {
   p_session_type_id, p_from: "2026-12-01", p_to: "2026-12-14", // dates in the coach's time zone, max 62 days
+  p_hours: 1, // optional, default 1. Private sessions only: up to app_settings.max_booking_hours
 });
 // -> [{ slot_start, slot_end, capacity, spots_left }]
 ```
 For group sessions, show "2 spots left" from `spots_left`.
+
+**Length:** sessions are 1 hour. A private session (`max_players = 1`) can be booked for several hours back to back by passing `hours` (default 1, max `app_settings.max_booking_hours`, 4 by default). Only start times where the whole length is free are returned. Card price = hourly price x hours; package bookings use one credit per hour, all from one package; cancelling returns them all; rescheduling keeps the length. Group sessions are always 1 hour.
 
 ### Book
 Show "Use a package credit" only if the parent has matching credits:
 ```js
 supabase.from("package_purchases").select("*").gt("sessions_remaining", 0);
 // a credit matches when (session_type_id is null OR = the chosen type) AND (expires_at is null OR > slot_start)
+//   AND sessions_remaining >= hours
 ```
 
 **With a package credit (instant):**
 ```js
 const { data, error } = await supabase.functions.invoke("booking-actions", {
-  body: { action: "book_with_package", session_type_id, player_id, start_time: slot.slot_start, parent_note },
+  body: { action: "book_with_package", session_type_id, player_id, start_time: slot.slot_start, hours, parent_note },
 });
 // data.booking
 ```
@@ -119,7 +123,7 @@ const { data, error } = await supabase.functions.invoke("booking-actions", {
 **Pay by card:**
 ```js
 const { data, error } = await supabase.functions.invoke("stripe-checkout", {
-  body: { kind: "session", session_type_id, player_id, start_time: slot.slot_start, parent_note },
+  body: { kind: "session", session_type_id, player_id, start_time: slot.slot_start, hours, parent_note },
 });
 window.top.location.href = data.url; // TOP window: Stripe Checkout cannot load inside an iframe
 ```
@@ -206,7 +210,8 @@ supabase.rpc("admin_set_booking_status", { p_booking_id, p_payment_status: "paid
 ```js
 supabase.functions.invoke("booking-actions", { body: {
   action: "admin_create_booking", player_id, session_type_id, start_time,
-  use_package: false,           // true = use the family's credit
+  hours: 1,                     // optional, default 1
+  use_package: false,           // true = use the family's credits (one per hour)
   override_availability: false, // true = allow outside published hours
   note, notify_parent: true,
 }});
@@ -289,7 +294,8 @@ Used by the marketing site and the app's logged-out pages. CORS allows only `htt
 | `forbidden` (403) | Not allowed (e.g. parent calling a coach action) |
 | `slot_unavailable` (409) | Someone just took it. Refresh slots |
 | `slot_full` (409) | Group is full |
-| `no_credits` (409) | No matching package credits. Offer card payment or packages |
+| `no_credits` (409) | No matching package credits (multi-hour: not enough on one package). Offer card payment or packages |
+| `bad_hours` (409) | Length not allowed: over the max, or a group session longer than 1 hour |
 | `player_not_found` (409) | Player isn't on this account / archived |
 | `booking_not_found` (409) | Booking doesn't exist or isn't yours |
 | `not_cancellable` / `not_reschedulable` (409) | Already cancelled/completed |

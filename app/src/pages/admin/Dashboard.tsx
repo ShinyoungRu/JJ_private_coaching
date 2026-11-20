@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { PaymentBadge, StatusBadge } from "../../components/badges";
-import { SlotPicker } from "../../components/SlotPicker";
+import { HoursPicker, maxHoursFor, SlotPicker } from "../../components/SlotPicker";
 import {
   Alert, Badge, Button, Card, Checkbox, Empty, Field, Input, Loading, Modal, PageHeader, Segmented, Select, Stat, Textarea, useToast,
 } from "../../components/ui";
@@ -256,6 +256,7 @@ function CoachCancelModal({ row, tz, onClose, onDone }: { row: ScheduleRow | nul
 }
 
 function NewBookingModal({ open, tz, onClose, onDone }: { open: boolean; tz: string; onClose: () => void; onDone: () => void }) {
+  const { settings } = useAuth();
   const players = useLoad(async () => open
     ? unwrap(await supabase.from("players").select("id, first_name, age_group, parent:profiles(full_name, email)").eq("active", true).order("first_name"))
     : [], [open]);
@@ -264,6 +265,7 @@ function NewBookingModal({ open, tz, onClose, onDone }: { open: boolean; tz: str
   const [typeId, setTypeId] = useState("");
   const [mode, setMode] = useState<"slot" | "custom">("slot");
   const [slot, setSlot] = useState<Slot | null>(null);
+  const [hours, setHours] = useState(1);
   const [date, setDate] = useState(todayKey(tz));
   const [time, setTime] = useState("17:00");
   const [usePackage, setUsePackage] = useState(false);
@@ -284,7 +286,7 @@ function NewBookingModal({ open, tz, onClose, onDone }: { open: boolean; tz: str
     try {
       await invoke("booking-actions", {
         action: "admin_create_booking", player_id: playerId, session_type_id: typeId, start_time: start,
-        use_package: usePackage, override_availability: mode === "custom", note, notify_parent: notify,
+        hours, use_package: usePackage, override_availability: mode === "custom", note, notify_parent: notify,
       });
       onDone();
       setSlot(null);
@@ -314,15 +316,16 @@ function NewBookingModal({ open, tz, onClose, onDone }: { open: boolean; tz: str
           </Field>
           <Field label="Session type">
             {(id) => (
-              <Select id={id} value={typeId} onChange={(e) => { setTypeId(e.target.value); setSlot(null); }}>
+              <Select id={id} value={typeId} onChange={(e) => { setTypeId(e.target.value); setSlot(null); setHours(1); }}>
                 {(types.data ?? []).map((t) => <option key={t.id} value={t.id}>{t.name} ({t.duration_minutes} min)</option>)}
               </Select>
             )}
           </Field>
         </div>
         <Segmented value={mode} onChange={setMode} options={[{ value: "slot", label: "Open slot" }, { value: "custom", label: "Custom time" }]} />
+        <HoursPicker value={hours} max={maxHoursFor(types.data?.find((t) => t.id === typeId), settings)} onChange={(h) => { setHours(h); setSlot(null); }} />
         {mode === "slot" ? (
-          typeId && <SlotPicker sessionTypeId={typeId} tz={tz} selected={slot?.slot_start} onSelect={setSlot} />
+          typeId && <SlotPicker sessionTypeId={typeId} hours={hours} tz={tz} selected={slot?.slot_start} onSelect={setSlot} />
         ) : (
           <div className="grid grid-cols-2 gap-4">
             <Field label="Date">{(id) => <Input id={id} type="date" value={date} onChange={(e) => setDate(e.target.value)} />}</Field>
@@ -330,7 +333,7 @@ function NewBookingModal({ open, tz, onClose, onDone }: { open: boolean; tz: str
           </div>
         )}
         <div className="space-y-2">
-          <Checkbox checked={usePackage} onChange={(e) => setUsePackage(e.target.checked)} label="Use one of the family's package credits (otherwise: cash/Venmo, mark paid later)" />
+          <Checkbox checked={usePackage} onChange={(e) => setUsePackage(e.target.checked)} label={`Use ${hours > 1 ? `${hours} of the client's package credits` : "one of the client's package credits"} (otherwise: cash/Venmo, mark paid later)`} />
           <Checkbox checked={notify} onChange={(e) => setNotify(e.target.checked)} label="Email the parent a confirmation" />
         </div>
         <Field label="Note (optional)">{(id) => <Input id={id} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />}</Field>

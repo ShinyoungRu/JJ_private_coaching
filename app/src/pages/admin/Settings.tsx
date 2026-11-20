@@ -51,6 +51,9 @@ export default function Settings() {
             <Field label="Start times every (min)">{(id) => <Input id={id} type="number" min={5} max={240} step={5} value={f.slot_interval_minutes} onChange={num("slot_interval_minutes")} />}</Field>
             <Field label="Minimum notice (hours)" hint="How soon parents can book">{(id) => <Input id={id} type="number" min={0} max={336} value={f.min_booking_notice_hours} onChange={num("min_booking_notice_hours")} />}</Field>
             <Field label="Book up to (days ahead)">{(id) => <Input id={id} type="number" min={1} max={365} value={f.max_booking_days_ahead} onChange={num("max_booking_days_ahead")} />}</Field>
+            <Field label="Longest booking (hours)" hint="Private sessions only. Groups are always 1 hour.">
+              {(id) => <Input id={id} type="number" min={1} max={8} value={f.max_booking_hours} onChange={num("max_booking_hours")} />}
+            </Field>
           </div>
         </Card>
         <Card className="space-y-4">

@@ -56,6 +56,9 @@ create table public.app_settings (
   -- Earliest a parent can book (hours from now) and how far ahead they can book.
   min_booking_notice_hours   integer not null default 12 check (min_booking_notice_hours between 0 and 336),
   max_booking_days_ahead     integer not null default 60 check (max_booking_days_ahead between 1 and 365),
+  -- Sessions are booked in whole sessions (1 hour each); a private session can
+  -- be booked back-to-back for up to this many hours. Group sessions are always 1.
+  max_booking_hours          integer not null default 4 check (max_booking_hours between 1 and 8),
   -- How long a slot is held while the parent is on Stripe Checkout.
   -- Stripe's minimum Checkout expiry is 30 minutes; keep this >= 32.
   payment_hold_minutes       integer not null default 35 check (payment_hold_minutes between 32 and 1440),

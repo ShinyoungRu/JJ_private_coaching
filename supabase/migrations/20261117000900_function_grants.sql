@@ -19,7 +19,7 @@ alter default privileges in schema public revoke execute on functions from publi
 -- ---- Logged-in users (parents and coach) ----------------------------------
 grant execute on function public.is_coach()                                  to authenticated;  -- used by RLS
 grant execute on function public.coach_timezone()                            to authenticated;
-grant execute on function public.get_available_slots(uuid, date, date)       to authenticated;
+grant execute on function public.get_available_slots(uuid, date, date, integer) to authenticated;
 grant execute on function public.public_next_slots(integer, uuid)            to authenticated;
 
 -- ---- Coach dashboard (each also checks is_coach() internally) -------------

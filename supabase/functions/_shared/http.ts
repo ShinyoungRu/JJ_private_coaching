@@ -70,6 +70,15 @@ export function requireDate(value: unknown, field: string): string {
   return new Date(value).toISOString();
 }
 
+/** Booking length in hours: omitted = 1. The database enforces the real limit (app_settings). */
+export function optionalHours(value: unknown): number {
+  if (value === undefined || value === null) return 1;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 8) {
+    throw new HttpError(400, "invalid_input", "hours must be a whole number from 1 to 8.");
+  }
+  return value;
+}
+
 export function cleanText(value: unknown, maxLen: number): string | null {
   if (value === undefined || value === null) return null;
   if (typeof value !== "string") return null;

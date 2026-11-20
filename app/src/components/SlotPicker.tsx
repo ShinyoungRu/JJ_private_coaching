@@ -2,31 +2,53 @@ import { useMemo, useState } from "react";
 import { unwrap } from "../lib/api";
 import { addDays, daysBetween, dateKey, fmtDay, fmtTime, todayKey, tzAbbrev } from "../lib/format";
 import { supabase } from "../lib/supabase";
-import type { Slot } from "../lib/types";
+import type { AppSettings, SessionType, Slot } from "../lib/types";
 import { useLoad } from "../lib/useLoad";
-import { Alert, Button, cx, Spinner } from "./ui";
+import { Alert, Button, cx, Segmented, Spinner } from "./ui";
 
 const DAYS_PER_PAGE = 7;
 
+/** Longest bookable length for a session type: private sessions up to the coach's limit, groups 1 hour. */
+export function maxHoursFor(type: Pick<SessionType, "max_players"> | undefined, settings: AppSettings | null): number {
+  return type && type.max_players === 1 ? (settings?.max_booking_hours ?? 1) : 1;
+}
+
+/** "Length: 1 hour | 2 hours | ..." for private sessions. */
+export function HoursPicker({ value, onChange, max }: { value: number; onChange: (h: number) => void; max: number }) {
+  if (max <= 1) return null;
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-3">
+      <span className="text-sm font-medium text-fg-2">Length</span>
+      <Segmented
+        value={String(value)}
+        onChange={(v) => onChange(Number(v))}
+        options={Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: i === 0 ? "1 hour" : `${i + 1} hours` }))}
+      />
+    </div>
+  );
+}
+
 /**
- * Week-at-a-time calendar of open slots for one session type.
+ * Week-at-a-time calendar of open slots for one session type and length.
  * Times are always shown in the coach's time zone.
  */
-export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onSelect, refreshKey = 0 }: {
+export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onSelect, refreshKey = 0, hours = 1 }: {
   sessionTypeId: string;
   tz: string;
   maxDaysAhead?: number;
   selected?: string | null;
   onSelect: (slot: Slot) => void;
   refreshKey?: number;
+  /** Back-to-back sessions; only start times where the whole length is free are shown. */
+  hours?: number;
 }) {
   const today = todayKey(tz);
   const [from, setFrom] = useState(today);
   const to = addDays(from, DAYS_PER_PAGE - 1);
 
   const { data: slots, loading, error } = useLoad(
-    async () => unwrap(await supabase.rpc("get_available_slots", { p_session_type_id: sessionTypeId, p_from: from, p_to: to })),
-    [sessionTypeId, from, refreshKey],
+    async () => unwrap(await supabase.rpc("get_available_slots", { p_session_type_id: sessionTypeId, p_from: from, p_to: to, p_hours: hours })),
+    [sessionTypeId, from, refreshKey, hours],
   );
 
   const byDay = useMemo(() => {

@@ -41,6 +41,35 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Internal: raise unless p_hours is a bookable length for this session type.
+-- 1 hour is always fine; private sessions (max_players = 1) can go up to
+-- app_settings.max_booking_hours; group sessions are always 1 hour.
+-- ---------------------------------------------------------------------------
+create or replace function public._assert_hours_allowed(p_session_type_id uuid, p_hours integer)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_max     integer;
+  v_players integer;
+begin
+  select max_booking_hours into v_max from public.app_settings where id = 1;
+  select max_players into v_players from public.session_types where id = p_session_type_id;
+
+  if p_hours is null or p_hours < 1 or p_hours > v_max then
+    raise exception 'Sessions can be booked for 1 to % hours.', v_max
+      using errcode = 'P0001', hint = 'bad_hours';
+  end if;
+  if p_hours > 1 and v_players > 1 then
+    raise exception 'Group sessions are 1 hour.' using errcode = 'P0001', hint = 'bad_hours';
+  end if;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Core slot generator (internal). Dates are calendar days in the coach's
 -- time zone. Returns only times, never who booked them.
 -- ---------------------------------------------------------------------------
@@ -49,7 +78,8 @@ create or replace function public._compute_slots(
   p_from              date,
   p_to                date,
   p_ignore_booking_id uuid    default null,
-  p_enforce_notice    boolean default true
+  p_enforce_notice    boolean default true,
+  p_hours             integer default 1   -- back-to-back sessions (private only)
 )
 returns table (slot_start timestamptz, slot_end timestamptz, capacity integer, spots_left integer)
 language sql
@@ -61,9 +91,10 @@ as $$
     select * from public.app_settings where id = 1
   ),
   st as (
-    select id, duration_minutes, max_players
+    select id, duration_minutes * p_hours as length_minutes, max_players
     from public.session_types
     where id = p_session_type_id and active
+      and (p_hours = 1 or max_players = 1)   -- group sessions are 1 hour
   ),
   days as (
     select gs::date as d
@@ -81,7 +112,7 @@ as $$
   candidates as (
     select distinct
            gs                                            as slot_start,
-           gs + make_interval(mins => st.duration_minutes) as slot_end,
+           gs + make_interval(mins => st.length_minutes) as slot_end,
            st.max_players                                as capacity,
            st.id                                         as session_type_id
     from windows
@@ -89,7 +120,7 @@ as $$
     cross join cfg
     cross join lateral generate_series(
       windows.w_start,
-      windows.w_end - make_interval(mins => st.duration_minutes),
+      windows.w_end - make_interval(mins => st.length_minutes),
       make_interval(mins => cfg.slot_interval_minutes)
     ) gs
   )
@@ -137,8 +168,9 @@ $$;
 -- ---------------------------------------------------------------------------
 create or replace function public.get_available_slots(
   p_session_type_id uuid,
-  p_from            date default null,
-  p_to              date default null
+  p_from            date    default null,
+  p_to              date    default null,
+  p_hours           integer default 1
 )
 returns table (slot_start timestamptz, slot_end timestamptz, capacity integer, spots_left integer)
 language plpgsql
@@ -160,8 +192,9 @@ begin
   if v_to - v_from > 62 then
     raise exception 'Date range too large (max 62 days).' using errcode = '22023', hint = 'bad_range';
   end if;
+  perform public._assert_hours_allowed(p_session_type_id, p_hours);
   return query
-    select * from public._compute_slots(p_session_type_id, v_from, v_to, null, true);
+    select * from public._compute_slots(p_session_type_id, v_from, v_to, null, true, p_hours);
 end;
 $$;
 
@@ -200,13 +233,15 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
--- Internal: raise unless p_start is a currently bookable slot; return its end.
+-- Internal: raise unless p_start is a currently bookable slot for p_hours;
+-- return its end.
 -- ---------------------------------------------------------------------------
 create or replace function public._assert_slot_available(
   p_session_type_id   uuid,
   p_start             timestamptz,
   p_ignore_booking_id uuid,
-  p_enforce_notice    boolean
+  p_enforce_notice    boolean,
+  p_hours             integer default 1
 )
 returns timestamptz
 language plpgsql
@@ -219,11 +254,12 @@ declare
   v_day date;
   v_end timestamptz;
 begin
+  perform public._assert_hours_allowed(p_session_type_id, p_hours);
   select timezone into v_tz from public.app_settings where id = 1;
   v_day := (p_start at time zone v_tz)::date;
 
   select s.slot_end into v_end
-  from public._compute_slots(p_session_type_id, v_day, v_day, p_ignore_booking_id, p_enforce_notice) s
+  from public._compute_slots(p_session_type_id, v_day, v_day, p_ignore_booking_id, p_enforce_notice, p_hours) s
   where s.slot_start = p_start and s.spots_left > 0;
 
   if v_end is null then
@@ -253,12 +289,14 @@ begin
 end;
 $$;
 
--- Internal: lock and consume one package credit. Prefers credits tied to this
--- session type, then the ones expiring soonest.
+-- Internal: lock and consume p_hours package credits (one per hour), all from
+-- one package so the booking points at a single purchase. Prefers credits tied
+-- to this session type, then the ones expiring soonest.
 create or replace function public._take_package_credit(
   p_parent_id       uuid,
   p_session_type_id uuid,
-  p_start           timestamptz
+  p_start           timestamptz,
+  p_hours           integer default 1
 )
 returns uuid
 language plpgsql
@@ -271,7 +309,7 @@ begin
   select pp.id into v_purchase_id
   from public.package_purchases pp
   where pp.parent_id = p_parent_id
-    and pp.sessions_remaining > 0
+    and pp.sessions_remaining >= p_hours
     and (pp.expires_at is null or pp.expires_at > p_start)
     and (pp.session_type_id is null or pp.session_type_id = p_session_type_id)
   order by (pp.session_type_id is null), pp.expires_at asc nulls last, pp.purchased_at asc
@@ -279,12 +317,16 @@ begin
   for update;
 
   if v_purchase_id is null then
+    if p_hours > 1 then
+      raise exception 'A %-hour session needs % credits on one package.', p_hours, p_hours
+        using errcode = 'P0001', hint = 'no_credits';
+    end if;
     raise exception 'You have no package credits that can be used for this session.'
       using errcode = 'P0001', hint = 'no_credits';
   end if;
 
   update public.package_purchases
-     set sessions_remaining = sessions_remaining - 1
+     set sessions_remaining = sessions_remaining - p_hours
    where id = v_purchase_id;
 
   return v_purchase_id;
@@ -299,7 +341,8 @@ create or replace function public.book_with_package(
   p_player_id       uuid,
   p_session_type_id uuid,
   p_start           timestamptz,
-  p_parent_note     text default null
+  p_parent_note     text    default null,
+  p_hours           integer default 1
 )
 returns public.bookings
 language plpgsql
@@ -315,14 +358,14 @@ begin
   perform public.release_expired_holds();
   perform public._assert_player_owned(p_actor, p_player_id);
 
-  v_end := public._assert_slot_available(p_session_type_id, p_start, null, true);
-  v_purchase_id := public._take_package_credit(p_actor, p_session_type_id, p_start);
+  v_end := public._assert_slot_available(p_session_type_id, p_start, null, true, p_hours);
+  v_purchase_id := public._take_package_credit(p_actor, p_session_type_id, p_start, p_hours);
 
   insert into public.bookings (
-    session_type_id, player_id, parent_id, start_time, end_time,
+    session_type_id, player_id, parent_id, start_time, end_time, hours,
     status, paid_with, payment_status, package_purchase_id, price_cents, parent_note
   ) values (
-    p_session_type_id, p_player_id, p_actor, p_start, v_end,
+    p_session_type_id, p_player_id, p_actor, p_start, v_end, p_hours,
     'booked', 'package', 'paid', v_purchase_id, 0, nullif(btrim(p_parent_note), '')
   )
   returning * into v_booking;
@@ -340,7 +383,8 @@ create or replace function public.create_pending_booking(
   p_player_id       uuid,
   p_session_type_id uuid,
   p_start           timestamptz,
-  p_parent_note     text default null
+  p_parent_note     text    default null,
+  p_hours           integer default 1
 )
 returns public.bookings
 language plpgsql
@@ -364,16 +408,16 @@ begin
       using errcode = 'P0001', hint = 'too_many_holds';
   end if;
 
-  v_end := public._assert_slot_available(p_session_type_id, p_start, null, true);
+  v_end := public._assert_slot_available(p_session_type_id, p_start, null, true, p_hours);
 
-  select price_cents into v_price from public.session_types where id = p_session_type_id;
+  select price_cents * p_hours into v_price from public.session_types where id = p_session_type_id;
   select payment_hold_minutes into v_hold from public.app_settings where id = 1;
 
   insert into public.bookings (
-    session_type_id, player_id, parent_id, start_time, end_time,
+    session_type_id, player_id, parent_id, start_time, end_time, hours,
     status, paid_with, payment_status, price_cents, hold_expires_at, parent_note
   ) values (
-    p_session_type_id, p_player_id, p_actor, p_start, v_end,
+    p_session_type_id, p_player_id, p_actor, p_start, v_end, p_hours,
     'pending_payment', 'stripe', 'unpaid', v_price,
     now() + make_interval(mins => v_hold), nullif(btrim(p_parent_note), '')
   )
@@ -443,7 +487,7 @@ begin
   if b.status = 'cancelled' and b.cancel_reason = 'hold_expired' then
     -- Payment landed after the hold lapsed. Re-book if the slot is still free.
     begin
-      perform public._assert_slot_available(b.session_type_id, b.start_time, b.id, false);
+      perform public._assert_slot_available(b.session_type_id, b.start_time, b.id, false, b.hours);
       update public.bookings
          set status                     = 'booked',
              payment_status             = 'paid',
@@ -593,7 +637,7 @@ begin
   elsif b.paid_with = 'package' then
     if v_within then
       update public.package_purchases
-         set sessions_remaining = least(sessions_remaining + 1, sessions_total)
+         set sessions_remaining = least(sessions_remaining + b.hours, sessions_total)
        where id = b.package_purchase_id;
       update public.bookings set payment_status = 'refunded' where id = b.id;
       v_action := 'credit_returned';
@@ -610,7 +654,7 @@ begin
         parent_id, session_type_id, source, label, sessions_total, sessions_remaining, expires_at
       ) values (
         b.parent_id, b.session_type_id, 'cancellation_credit',
-        left('Credit: cancelled ' || coalesce(v_st_name, 'session'), 120), 1, 1,
+        left('Credit: cancelled ' || coalesce(v_st_name, 'session'), 120), b.hours, b.hours,
         case when cfg.credit_validity_days is null then null
              else now() + make_interval(days => cfg.credit_validity_days) end
       )
@@ -722,7 +766,7 @@ begin
       using errcode = 'P0001', hint = 'same_time';
   end if;
 
-  v_end := public._assert_slot_available(b.session_type_id, p_new_start, b.id, not v_is_coach);
+  v_end := public._assert_slot_available(b.session_type_id, p_new_start, b.id, not v_is_coach, b.hours);
 
   update public.bookings
      set start_time       = p_new_start,
@@ -746,7 +790,8 @@ create or replace function public.admin_create_booking(
   p_start                 timestamptz,
   p_use_package           boolean default false,
   p_override_availability boolean default false,
-  p_note                  text    default null
+  p_note                  text    default null,
+  p_hours                 integer default 1
 )
 returns public.bookings
 language plpgsql
@@ -780,25 +825,26 @@ begin
   end if;
 
   if p_override_availability then
-    v_end := p_start + make_interval(mins => v_duration);
+    perform public._assert_hours_allowed(p_session_type_id, p_hours);
+    v_end := p_start + make_interval(mins => v_duration * p_hours);
   else
-    v_end := public._assert_slot_available(p_session_type_id, p_start, null, false);
+    v_end := public._assert_slot_available(p_session_type_id, p_start, null, false, p_hours);
   end if;
 
   if p_use_package then
-    v_purchase_id := public._take_package_credit(v_parent_id, p_session_type_id, p_start);
+    v_purchase_id := public._take_package_credit(v_parent_id, p_session_type_id, p_start, p_hours);
   end if;
 
   insert into public.bookings (
-    session_type_id, player_id, parent_id, start_time, end_time,
+    session_type_id, player_id, parent_id, start_time, end_time, hours,
     status, paid_with, payment_status, package_purchase_id, price_cents, parent_note
   ) values (
-    p_session_type_id, p_player_id, v_parent_id, p_start, v_end,
+    p_session_type_id, p_player_id, v_parent_id, p_start, v_end, p_hours,
     'booked',
     case when p_use_package then 'package'::public.payment_method else 'manual'::public.payment_method end,
     case when p_use_package then 'paid'::public.payment_status   else 'unpaid'::public.payment_status end,
     v_purchase_id,
-    case when p_use_package then 0 else v_price end,
+    case when p_use_package then 0 else v_price * p_hours end,
     nullif(btrim(p_note), '')
   )
   returning * into v_booking;

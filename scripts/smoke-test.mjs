@@ -32,6 +32,7 @@ const ID = {
   mia: "b0000000-0000-4000-8000-000000000001",
   sam: "b0000000-0000-4000-8000-000000000003",
   oneOnOne: "c0000000-0000-4000-8000-000000000001",
+  smallGroup: "c0000000-0000-4000-8000-000000000002",
   pkgGroup5: "d0000000-0000-4000-8000-000000000003",
 };
 // Personal data from the seed that must NEVER appear in public responses.
@@ -208,6 +209,19 @@ let bookedId;
 
   const coachOnly = await fn("booking-actions", { method: "POST", token: tokenA, body: { action: "admin_create_booking", player_id: ID.mia, session_type_id: ID.oneOnOne, start_time: slots.json[5].slot_start } });
   check(coachOnly.status === 403, "parents cannot use coach-only booking actions", coachOnly.status);
+
+  // Multi-hour: private sessions can be booked back to back (one credit per hour).
+  const slots2 = await call("/rest/v1/rpc/get_available_slots", { method: "POST", token: tokenA, body: { p_session_type_id: ID.oneOnOne, p_from: isoDate(20), p_to: isoDate(34), p_hours: 2 } });
+  const twoHour = slots2.json?.at(-1);
+  check(twoHour && Date.parse(twoHour.slot_end) - Date.parse(twoHour.slot_start) === 2 * 3600e3, "2-hour slots are listed", slots2.json?.length);
+  const book2 = await fn("booking-actions", { method: "POST", token: tokenA, body: { action: "book_with_package", session_type_id: ID.oneOnOne, player_id: ID.mia, start_time: twoHour?.slot_start, hours: 2 } });
+  check(book2.status === 200 && book2.json?.booking?.hours === 2, "parent A books 2 hours with package credits", book2.json);
+  const cancel2 = await fn("booking-actions", { method: "POST", token: tokenA, body: { action: "cancel", booking_id: book2.json?.booking?.id } });
+  check(cancel2.status === 200 && cancel2.json?.result?.action === "credit_returned", "cancelling the 2-hour booking returns the credits", cancel2.json);
+  const groupLong = await fn("booking-actions", { method: "POST", token: tokenA, body: { action: "book_with_package", session_type_id: ID.smallGroup, player_id: ID.mia, start_time: twoHour?.slot_start, hours: 2 } });
+  check(groupLong.status >= 400 && groupLong.json?.error?.code === "bad_hours", "group sessions can't be booked longer than 1 hour", groupLong.json);
+  const tooLong = await fn("booking-actions", { method: "POST", token: tokenA, body: { action: "book_with_package", session_type_id: ID.oneOnOne, player_id: ID.mia, start_time: twoHour?.slot_start, hours: 9 } });
+  check(tooLong.status === 400, "hours outside 1-8 are rejected", tooLong.status);
 }
 
 console.log("\nStripe webhook (signed locally with STRIPE_WEBHOOK_SECRET)");

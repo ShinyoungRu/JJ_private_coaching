@@ -327,5 +327,94 @@ select throws_ok($$ insert into storage.objects (bucket_id, name) values ('drill
   '42501', null, 'parents cannot upload to the drill-videos bucket');
 select pg_temp.reset_role();
 
+-- =========================================================================
+-- Multi-hour bookings: default 1 hour; private sessions up to 4 hours back to
+-- back; price and package credits scale with hours; groups stay 1 hour.
+-- Uses days 25-40 out so it doesn't collide with the bookings above.
+-- =========================================================================
+create temp table h2 as
+select row_number() over (order by slot_start) as n, slot_start, slot_end
+from public.get_available_slots('c0000000-0000-4000-8000-000000000001',
+       (now() at time zone 'America/New_York')::date + 25,
+       (now() at time zone 'America/New_York')::date + 40, 2);
+
+select ok((select count(*) from h2) > 10, '2-hour private slots are offered');
+select ok(not exists (select 1 from h2 where slot_end - slot_start <> interval '2 hours'),
+  'every 2-hour slot is exactly 2 hours long');
+select ok(not exists (
+  select 1 from h2
+  where (slot_end at time zone 'America/New_York')::time > time '20:00'
+    and extract(dow from slot_start at time zone 'America/New_York') between 1 and 4
+), '2-hour weekday slots still end by 8pm (the whole length fits the window)');
+select ok(not exists (
+  select 1 from public.get_available_slots('c0000000-0000-4000-8000-000000000001') g
+  where g.slot_end - g.slot_start <> interval '1 hour'
+), 'without hours, slots default to 1 hour');
+select throws_ok($$ select * from public.get_available_slots('c0000000-0000-4000-8000-000000000002', null, null, 2) $$,
+  'P0001', 'Group sessions are 1 hour.', 'group sessions cannot be booked longer than 1 hour');
+select throws_ok($$ select * from public.get_available_slots('c0000000-0000-4000-8000-000000000001', null, null, 5) $$,
+  'P0001', 'Sessions can be booked for 1 to 4 hours.', 'longer than the 4-hour maximum is rejected');
+
+-- Card: price = hourly price x hours, and the whole length is held.
+-- (The adult client books for themselves; parent B already has 3 open checkouts above.)
+create temp table hp as
+select * from public.create_pending_booking('a0000000-0000-4000-8000-000000000005',
+  (select id from public.players where parent_id = 'a0000000-0000-4000-8000-000000000005' and is_self),
+  'c0000000-0000-4000-8000-000000000001', (select slot_start from h2 where n = 1), null, 2);
+select is((select price_cents from hp), 18000, '2 hours by card costs 2 x $90');
+select is((select hours from hp), 2, 'the booking records 2 hours');
+select is((select end_time - start_time from hp), interval '2 hours', 'the booking runs 2 hours');
+select ok(not exists (
+  select 1 from public.get_available_slots('c0000000-0000-4000-8000-000000000001',
+    (now() at time zone 'America/New_York')::date + 25, (now() at time zone 'America/New_York')::date + 40)
+  where slot_start = (select start_time + interval '1 hour' from hp)
+), 'the second hour of a 2-hour booking is not offered to anyone else');
+
+-- Package credits: one per hour, all from one package; cancelling returns them all.
+insert into public.package_purchases (id, parent_id, session_type_id, source, label, sessions_total, sessions_remaining)
+values ('e0000000-0000-4000-8000-0000000000f1', 'a0000000-0000-4000-8000-000000000002',
+        'c0000000-0000-4000-8000-000000000001', 'coach_grant', 'Hours test', 4, 4);
+create temp table credits_before as
+select sum(sessions_remaining)::int as n from public.package_purchases where parent_id = 'a0000000-0000-4000-8000-000000000002';
+create temp table h3 as
+select row_number() over (order by slot_start) as n, slot_start
+from public.get_available_slots('c0000000-0000-4000-8000-000000000001',
+       (now() at time zone 'America/New_York')::date + 25,
+       (now() at time zone 'America/New_York')::date + 40, 3)
+where slot_start > (select start_time from hp) + interval '1 day';
+create temp table hb as
+select * from public.book_with_package('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001',
+  'c0000000-0000-4000-8000-000000000001', (select slot_start from h3 where n = 1), null, 3);
+select is((select sum(sessions_remaining)::int from public.package_purchases where parent_id = 'a0000000-0000-4000-8000-000000000002'),
+  (select n - 3 from credits_before), 'a 3-hour booking uses 3 package credits');
+select is((select end_time - start_time from hb), interval '3 hours', 'the 3-hour package booking runs 3 hours');
+
+select lives_ok($$ select public.reschedule_booking('a0000000-0000-4000-8000-000000000001', (select id from hb),
+  (select slot_start from h3 where slot_start > (select start_time from hb) + interval '1 day' limit 1)) $$,
+  'coach reschedules a 3-hour booking');
+select is((select end_time - start_time from public.bookings where id = (select id from hb)), interval '3 hours',
+  'rescheduling keeps the 3-hour length');
+
+select lives_ok($$ select public.cancel_booking('a0000000-0000-4000-8000-000000000001', (select id from hb)) $$,
+  'coach cancels the 3-hour booking');
+select is((select sum(sessions_remaining)::int from public.package_purchases where parent_id = 'a0000000-0000-4000-8000-000000000002'),
+  (select n from credits_before), 'cancelling returns all 3 credits');
+
+-- Credits must all come from one package (parent B: two packs of 1 credit each).
+insert into public.package_purchases (parent_id, session_type_id, source, label, sessions_total, sessions_remaining) values
+  ('a0000000-0000-4000-8000-000000000003', null, 'coach_grant', 'One A', 1, 1),
+  ('a0000000-0000-4000-8000-000000000003', null, 'coach_grant', 'One B', 1, 1);
+select throws_ok($$ select public.book_with_package('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003',
+  'c0000000-0000-4000-8000-000000000001', (select slot_start from h2 where n = 20), null, 2) $$,
+  'P0001', 'A 2-hour session needs 2 credits on one package.', '2 hours needs 2 credits on a single package');
+
+-- Coach-created: manual payment price scales too.
+select is((select price_cents from public.admin_create_booking('a0000000-0000-4000-8000-000000000001',
+  'b0000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000001',
+  (select slot_start from public.get_available_slots('c0000000-0000-4000-8000-000000000001',
+     (now() at time zone 'America/New_York')::date + 25, (now() at time zone 'America/New_York')::date + 40, 4)
+   order by slot_start desc limit 1), false, false, null, 4)), 36000,
+  'coach-created 4-hour booking (cash/Venmo) is priced at 4 x $90');
+
 select * from finish();
 rollback;

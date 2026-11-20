@@ -64,7 +64,7 @@ export default function MyBookings() {
                   <div>
                     <div className="text-lg font-semibold text-fg">{fmtLongDateTime(b.start_time, tz)}</div>
                     <div className="mt-0.5 text-sm text-muted">
-                      {b.player?.first_name} · {b.session_type?.name} · until {fmtTime(b.end_time, tz)}
+                      {b.player?.first_name} · {b.session_type?.name}{b.hours > 1 && ` · ${b.hours} hours`} · until {fmtTime(b.end_time, tz)}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <StatusBadge status={b.status} late={b.late_cancellation} />
@@ -237,7 +237,7 @@ function RescheduleModal({ booking, tz, onClose, onDone }: {
     >
       <p className="mb-4 text-sm text-muted">Currently {fmtLongDateTime(booking.start_time, tz)}. Your payment carries over.</p>
       {error && <Alert tone="error" className="mb-4">{error}</Alert>}
-      <SlotPicker sessionTypeId={booking.session_type_id} tz={tz} selected={slot?.slot_start} onSelect={setSlot} />
+      <SlotPicker sessionTypeId={booking.session_type_id} hours={booking.hours} tz={tz} selected={slot?.slot_start} onSelect={setSlot} />
     </Modal>
   );
 }

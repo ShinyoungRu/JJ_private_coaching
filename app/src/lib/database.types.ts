@@ -27,14 +27,14 @@ isOneToOne: false
                   ]
                 },"app_settings": {
                   Row: {
-                    "business_name": string,"cancellation_window_hours": number,"credit_validity_days": number | null,"currency": string,"id": number,"max_booking_days_ahead": number,"min_booking_notice_hours": number,"payment_hold_minutes": number,"reminder_hours_before": number,"slot_interval_minutes": number,"stripe_cancellation_refund": string,"timezone": string,"updated_at": string
+                    "business_name": string,"cancellation_window_hours": number,"credit_validity_days": number | null,"currency": string,"id": number,"max_booking_days_ahead": number,"max_booking_hours": number,"min_booking_notice_hours": number,"payment_hold_minutes": number,"reminder_hours_before": number,"slot_interval_minutes": number,"stripe_cancellation_refund": string,"timezone": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"updated_at"?: string
+                    "business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"max_booking_hours"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"updated_at"?: string
+                    "business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"max_booking_hours"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -69,14 +69,14 @@ isOneToOne: false
                   ]
                 },"bookings": {
                   Row: {
-                    "cancel_reason": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"created_at": string,"end_time": string,"hold_expires_at": string | null,"id": string,"late_cancellation": boolean,"package_purchase_id": string | null,"paid_with": Database["public"]['Enums']["payment_method"],"parent_id": string,"parent_note": string | null,"payment_status": Database["public"]['Enums']["payment_status"],"player_id": string,"price_cents": number | null,"reminder_sent_at": string | null,"session_type_id": string,"slot_key": string,"start_time": string,"status": Database["public"]['Enums']["booking_status"],"stripe_checkout_session_id": string | null,"stripe_payment_intent_id": string | null,"updated_at": string
+                    "cancel_reason": string | null,"cancelled_at": string | null,"cancelled_by": string | null,"created_at": string,"end_time": string,"hold_expires_at": string | null,"hours": number,"id": string,"late_cancellation": boolean,"package_purchase_id": string | null,"paid_with": Database["public"]['Enums']["payment_method"],"parent_id": string,"parent_note": string | null,"payment_status": Database["public"]['Enums']["payment_status"],"player_id": string,"price_cents": number | null,"reminder_sent_at": string | null,"session_type_id": string,"slot_key": string,"start_time": string,"status": Database["public"]['Enums']["booking_status"],"stripe_checkout_session_id": string | null,"stripe_payment_intent_id": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"end_time": string,"hold_expires_at"?: string | null,"id"?: string,"late_cancellation"?: boolean,"package_purchase_id"?: string | null,"paid_with": Database["public"]['Enums']["payment_method"],"parent_id": string,"parent_note"?: string | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"player_id": string,"price_cents"?: number | null,"reminder_sent_at"?: string | null,"session_type_id": string,"slot_key": string,"start_time": string,"status"?: Database["public"]['Enums']["booking_status"],"stripe_checkout_session_id"?: string | null,"stripe_payment_intent_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"end_time": string,"hold_expires_at"?: string | null,"hours"?: number,"id"?: string,"late_cancellation"?: boolean,"package_purchase_id"?: string | null,"paid_with": Database["public"]['Enums']["payment_method"],"parent_id": string,"parent_note"?: string | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"player_id": string,"price_cents"?: number | null,"reminder_sent_at"?: string | null,"session_type_id": string,"slot_key": string,"start_time": string,"status"?: Database["public"]['Enums']["booking_status"],"stripe_checkout_session_id"?: string | null,"stripe_payment_intent_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"end_time"?: string,"hold_expires_at"?: string | null,"id"?: string,"late_cancellation"?: boolean,"package_purchase_id"?: string | null,"paid_with"?: Database["public"]['Enums']["payment_method"],"parent_id"?: string,"parent_note"?: string | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"player_id"?: string,"price_cents"?: number | null,"reminder_sent_at"?: string | null,"session_type_id"?: string,"slot_key"?: string,"start_time"?: string,"status"?: Database["public"]['Enums']["booking_status"],"stripe_checkout_session_id"?: string | null,"stripe_payment_intent_id"?: string | null,"updated_at"?: string
+                    "cancel_reason"?: string | null,"cancelled_at"?: string | null,"cancelled_by"?: string | null,"created_at"?: string,"end_time"?: string,"hold_expires_at"?: string | null,"hours"?: number,"id"?: string,"late_cancellation"?: boolean,"package_purchase_id"?: string | null,"paid_with"?: Database["public"]['Enums']["payment_method"],"parent_id"?: string,"parent_note"?: string | null,"payment_status"?: Database["public"]['Enums']["payment_status"],"player_id"?: string,"price_cents"?: number | null,"reminder_sent_at"?: string | null,"session_type_id"?: string,"slot_key"?: string,"start_time"?: string,"status"?: Database["public"]['Enums']["booking_status"],"stripe_checkout_session_id"?: string | null,"stripe_payment_intent_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -357,14 +357,17 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "_assert_player_owned":
+            "_assert_hours_allowed":
+{ Args: { "p_hours": number,"p_session_type_id": string }; Returns: undefined
+                           },
+"_assert_player_owned":
 { Args: { "p_parent_id": string,"p_player_id": string }; Returns: undefined
                            },
 "_assert_slot_available":
-{ Args: { "p_enforce_notice": boolean,"p_ignore_booking_id": string,"p_session_type_id": string,"p_start": string }; Returns: string
+{ Args: { "p_enforce_notice": boolean,"p_hours"?: number,"p_ignore_booking_id": string,"p_session_type_id": string,"p_start": string }; Returns: string
                            },
 "_compute_slots":
-{ Args: { "p_enforce_notice"?: boolean,"p_from": string,"p_ignore_booking_id"?: string,"p_session_type_id": string,"p_to": string }; Returns: {
+{ Args: { "p_enforce_notice"?: boolean,"p_from": string,"p_hours"?: number,"p_ignore_booking_id"?: string,"p_session_type_id": string,"p_to": string }; Returns: {
               "capacity": number,"slot_end": string,"slot_start": string,"spots_left": number
             }[]
                            },
@@ -372,7 +375,7 @@ isOneToOne: false
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
 "_take_package_credit":
-{ Args: { "p_parent_id": string,"p_session_type_id": string,"p_start": string }; Returns: string
+{ Args: { "p_hours"?: number,"p_parent_id": string,"p_session_type_id": string,"p_start": string }; Returns: string
                            },
 "admin_block_time":
 { Args: { "p_end"?: string,"p_end_date"?: string,"p_reason"?: string,"p_start"?: string,"p_start_date"?: string }; Returns: Json
@@ -395,13 +398,14 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "admin_create_booking":
-{ Args: { "p_actor": string,"p_note"?: string,"p_override_availability"?: boolean,"p_player_id": string,"p_session_type_id": string,"p_start": string,"p_use_package"?: boolean }; Returns: {
+{ Args: { "p_actor": string,"p_hours"?: number,"p_note"?: string,"p_override_availability"?: boolean,"p_player_id": string,"p_session_type_id": string,"p_start": string,"p_use_package"?: boolean }; Returns: {
               "cancel_reason": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
 "created_at": string,
 "end_time": string,
 "hold_expires_at": string | null,
+"hours": number,
 "id": string,
 "late_cancellation": boolean,
 "package_purchase_id": string | null,
@@ -439,6 +443,7 @@ isOneToOne: false
 "created_at": string,
 "end_time": string,
 "hold_expires_at": string | null,
+"hours": number,
 "id": string,
 "late_cancellation": boolean,
 "package_purchase_id": string | null,
@@ -472,13 +477,14 @@ isOneToOne: false
             }[]
                            },
 "book_with_package":
-{ Args: { "p_actor": string,"p_parent_note"?: string,"p_player_id": string,"p_session_type_id": string,"p_start": string }; Returns: {
+{ Args: { "p_actor": string,"p_hours"?: number,"p_parent_note"?: string,"p_player_id": string,"p_session_type_id": string,"p_start": string }; Returns: {
               "cancel_reason": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
 "created_at": string,
 "end_time": string,
 "hold_expires_at": string | null,
+"hours": number,
 "id": string,
 "late_cancellation": boolean,
 "package_purchase_id": string | null,
@@ -521,13 +527,14 @@ isOneToOne: false
 { Args: { "p_amount_cents": number,"p_booking_id": string,"p_checkout_session_id": string,"p_currency"?: string,"p_payment_intent_id": string }; Returns: string
                            },
 "create_pending_booking":
-{ Args: { "p_actor": string,"p_parent_note"?: string,"p_player_id": string,"p_session_type_id": string,"p_start": string }; Returns: {
+{ Args: { "p_actor": string,"p_hours"?: number,"p_parent_note"?: string,"p_player_id": string,"p_session_type_id": string,"p_start": string }; Returns: {
               "cancel_reason": string | null,
 "cancelled_at": string | null,
 "cancelled_by": string | null,
 "created_at": string,
 "end_time": string,
 "hold_expires_at": string | null,
+"hours": number,
 "id": string,
 "late_cancellation": boolean,
 "package_purchase_id": string | null,
@@ -553,7 +560,7 @@ isOneToOne: false
         isSetofReturn: false
       } },
 "get_available_slots":
-{ Args: { "p_from"?: string,"p_session_type_id": string,"p_to"?: string }; Returns: {
+{ Args: { "p_from"?: string,"p_hours"?: number,"p_session_type_id": string,"p_to"?: string }; Returns: {
               "capacity": number,"slot_end": string,"slot_start": string,"spots_left": number
             }[]
                            },
