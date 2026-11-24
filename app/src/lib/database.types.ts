@@ -27,14 +27,14 @@ isOneToOne: false
                   ]
                 },"app_settings": {
                   Row: {
-                    "business_name": string,"cancellation_window_hours": number,"credit_validity_days": number | null,"currency": string,"id": number,"max_booking_days_ahead": number,"max_booking_hours": number,"min_booking_notice_hours": number,"payment_hold_minutes": number,"reminder_hours_before": number,"slot_interval_minutes": number,"stripe_cancellation_refund": string,"timezone": string,"updated_at": string
+                    "allow_cash_payments": boolean,"business_name": string,"cancellation_window_hours": number,"credit_validity_days": number | null,"currency": string,"id": number,"max_booking_days_ahead": number,"max_booking_hours": number,"min_booking_notice_hours": number,"payment_hold_minutes": number,"reminder_hours_before": number,"slot_interval_minutes": number,"stripe_cancellation_refund": string,"timezone": string,"training_location_address": string,"training_location_name": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"max_booking_hours"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"updated_at"?: string
+                    "allow_cash_payments"?: boolean,"business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"max_booking_hours"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"training_location_address"?: string,"training_location_name"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"max_booking_hours"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"updated_at"?: string
+                    "allow_cash_payments"?: boolean,"business_name"?: string,"cancellation_window_hours"?: number,"credit_validity_days"?: number | null,"currency"?: string,"id"?: number,"max_booking_days_ahead"?: number,"max_booking_hours"?: number,"min_booking_notice_hours"?: number,"payment_hold_minutes"?: number,"reminder_hours_before"?: number,"slot_interval_minutes"?: number,"stripe_cancellation_refund"?: string,"timezone"?: string,"training_location_address"?: string,"training_location_name"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -476,6 +476,39 @@ isOneToOne: false
               "email": string,"full_name": string,"parent_id": string
             }[]
                            },
+"book_with_cash":
+{ Args: { "p_actor": string,"p_hours"?: number,"p_parent_note"?: string,"p_player_id": string,"p_session_type_id": string,"p_start": string }; Returns: {
+              "cancel_reason": string | null,
+"cancelled_at": string | null,
+"cancelled_by": string | null,
+"created_at": string,
+"end_time": string,
+"hold_expires_at": string | null,
+"hours": number,
+"id": string,
+"late_cancellation": boolean,
+"package_purchase_id": string | null,
+"paid_with": Database["public"]['Enums']["payment_method"],
+"parent_id": string,
+"parent_note": string | null,
+"payment_status": Database["public"]['Enums']["payment_status"],
+"player_id": string,
+"price_cents": number | null,
+"reminder_sent_at": string | null,
+"session_type_id": string,
+"slot_key": string,
+"start_time": string,
+"status": Database["public"]['Enums']["booking_status"],
+"stripe_checkout_session_id": string | null,
+"stripe_payment_intent_id": string | null,
+"updated_at": string
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "bookings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "book_with_package":
 { Args: { "p_actor": string,"p_hours"?: number,"p_parent_note"?: string,"p_player_id": string,"p_session_type_id": string,"p_start": string }; Returns: {
               "cancel_reason": string | null,

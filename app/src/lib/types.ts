@@ -65,6 +65,7 @@ export interface PublicSlot {
 
 export interface PublicPricing {
   currency: string;
+  location: { name: string; address: string; maps_url: string } | null;
   session_types: Array<SessionType & { price_display: string; book_url: string }>;
   packages: Array<Package & { price_display: string; per_session_display: string; session_type_name: string | null }>;
 }

@@ -57,6 +57,8 @@ Deno.serve(async (req) => {
             startTime: r.start_time,
             endTime: r.end_time,
             timezone: settings.timezone,
+            locationName: settings.training_location_name,
+            locationAddress: settings.training_location_address,
           }),
           `reminder-${r.booking_id}-${r.start_time}`,
         );

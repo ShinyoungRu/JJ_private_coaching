@@ -22,7 +22,7 @@ export function HoursPicker({ value, onChange, max }: { value: number; onChange:
       <Segmented
         value={String(value)}
         onChange={(v) => onChange(Number(v))}
-        options={Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: i === 0 ? "1 hour" : `${i + 1} hours` }))}
+        options={Array.from({ length: max }, (_, i) => ({ value: String(i + 1), label: i === 0 ? "1 hr" : `${i + 1} hrs` }))}
       />
     </div>
   );
@@ -55,7 +55,8 @@ export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onS
     const map = new Map<string, Slot[]>();
     for (let i = 0; i < DAYS_PER_PAGE; i++) map.set(addDays(from, i), []);
     (slots ?? []).forEach((s) => map.get(dateKey(s.slot_start, tz))?.push(s));
-    return [...map.entries()];
+    // Only days with open times; the week header already shows the date range.
+    return [...map.entries()].filter(([, list]) => list.length > 0);
   }, [slots, from, tz]);
 
   const canPrev = from > today;
@@ -88,10 +89,7 @@ export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onS
                 <div className="text-sm font-semibold text-fg">{fmtDay(day, { weekday: "long" })}</div>
                 <div className="text-xs text-subtle">{fmtDay(day, { month: "short", day: "numeric" })}</div>
               </div>
-              {list.length === 0 ? (
-                <div className="pt-1.5 text-sm text-muted">No open times</div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2">
                   {list.map((s) => {
                     const isSel = selected === s.slot_start;
                     return (
@@ -116,8 +114,7 @@ export function SlotPicker({ sessionTypeId, tz, maxDaysAhead = 60, selected, onS
                       </button>
                     );
                   })}
-                </div>
-              )}
+              </div>
             </div>
           ))}
           {total === 0 && !loading && (

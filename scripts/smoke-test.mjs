@@ -103,6 +103,7 @@ console.log("\nPublic endpoints");
   else check(r.headers.get("access-control-allow-origin") === SITE, "public-pricing allows www.jjprivatetraining.com (CORS)");
   check(r.json?.session_types?.length === 2, "only active session types are listed", r.json?.session_types?.map((t) => t.name));
   check(r.json?.packages?.length === 3, "active packages are listed");
+  check(typeof r.json?.location?.name === "string" && r.json.location.maps_url?.startsWith("https://www.google.com/maps/"), "public-pricing includes the training location");
   check(!PII.some((p) => r.text.includes(p)), "public-pricing leaks no personal data");
 
   const evil = await fn("public-pricing", { headers: { Origin: "https://evil.example" } });

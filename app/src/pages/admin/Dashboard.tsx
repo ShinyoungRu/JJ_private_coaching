@@ -65,9 +65,10 @@ export default function Dashboard() {
       <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Sessions this month" value={s?.sessions_this_month ?? "–"} hint={s ? `${s.completed_this_month} completed · ${s.no_shows_this_month} no-shows` : undefined} />
         <Stat label="Revenue this month" value={s ? fmtMoney(s.revenue_this_month_cents) : "–"} hint="Card + packages, after refunds" />
-        <Stat label="Active players" value={s?.active_players ?? "–"} hint={s ? plural(s.total_families, "client") : undefined} />
+        <Stat label="To collect" value={s?.unpaid_manual_bookings ?? "–"}
+          hint={s ? (s.unpaid_manual_bookings ? "Unpaid cash/Venmo sessions" : "All cash/Venmo paid") : undefined} />
         <Link to="/admin/inquiries" className="block transition-transform hover:-translate-y-0.5">
-          <Stat label="New inquiries" value={s?.new_inquiries ?? "–"} hint={s?.unpaid_manual_bookings ? `${s.unpaid_manual_bookings} unpaid cash/Venmo` : "From the website"} />
+          <Stat label="New inquiries" value={s?.new_inquiries ?? "–"} hint={s ? `From the website · ${plural(s.active_players, "active player")}` : undefined} />
         </Link>
       </div>
 

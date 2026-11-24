@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { publicGet } from "../lib/api";
+import { fmtMoney } from "../lib/format";
 import type { PublicPricing, PublicSlot } from "../lib/types";
 import { useLoad } from "../lib/useLoad";
+import { LocationLine } from "./LocationLine";
 import { Alert, buttonClasses, Card, cx, Loading } from "./ui";
 
 /**
@@ -34,6 +36,7 @@ export function PublicBook({ initialType, embed = false }: { initialType?: strin
 
   return (
     <div className="space-y-6">
+      <LocationLine place={pricing.data?.location ?? null} />
       <div className="grid gap-3 sm:grid-cols-2">
         {types.map((t) => (
           <button
@@ -46,7 +49,7 @@ export function PublicBook({ initialType, embed = false }: { initialType?: strin
           >
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-lg font-bold text-fg">{t.name}</span>
-              <span className="font-bold text-fg">{t.price_display}</span>
+              <span className="font-bold text-fg">{fmtMoney(t.price_cents, pricing.data?.currency)}</span>
             </div>
             <div className="mt-1 text-sm text-muted">
               {t.duration_minutes} min{t.max_players > 1 ? ` · up to ${t.max_players} players` : " · private"}

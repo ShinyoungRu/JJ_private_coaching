@@ -68,7 +68,11 @@ export function tzAbbrev(tz: string): string {
 
 export function fmtMoney(cents: number | null | undefined, currency = "usd"): string {
   if (cents == null) return "-";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
+  // "$90" for whole amounts, "$92.50" otherwise.
+  const digits = cents % 100 === 0 ? 0 : 2;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency", currency: currency.toUpperCase(), minimumFractionDigits: digits, maximumFractionDigits: digits,
+  }).format(cents / 100);
 }
 
 export function hoursUntil(iso: string): number {

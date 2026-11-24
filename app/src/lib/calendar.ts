@@ -1,3 +1,5 @@
+import { mapsUrl, type Place, placeText } from "./location";
+
 // "Add to calendar": builds a standard iCalendar (.ics) file for a booking.
 // Apple Calendar, Google Calendar and Outlook all import it. On a Mac it opens in
 // Calendar; on iPhone, Safari offers "Add to Calendar" (or saves it to Downloads,
@@ -10,6 +12,7 @@ export interface CalendarEvent {
   end: string;   // ISO date-time
   title: string;
   description?: string;
+  location?: string;
   url?: string;
 }
 
@@ -59,6 +62,7 @@ export function buildIcs(e: CalendarEvent): string {
     `DTEND:${icsDate(e.end)}`,
     `SUMMARY:${icsText(e.title)}`,
     ...(e.description ? [`DESCRIPTION:${icsText(e.description)}`] : []),
+    ...(e.location ? [`LOCATION:${icsText(e.location)}`] : []),
     ...(e.url ? [`URL:${e.url}`] : []),
     "BEGIN:VALARM",
     "ACTION:DISPLAY",
@@ -83,14 +87,21 @@ export function downloadIcs(e: CalendarEvent, filename: string): void {
 }
 
 /** Calendar event for a training session booking. */
-export function bookingEvent(b: { id: string; start_time: string; end_time: string }, sessionName: string, playerName: string): CalendarEvent {
+export function bookingEvent(
+  b: { id: string; start_time: string; end_time: string },
+  sessionName: string,
+  playerName: string,
+  place?: Place | null,
+): CalendarEvent {
   const manage = `${window.location.origin}/bookings`;
+  const where = place ? `\nWhere: ${placeText(place)}\nDirections: ${mapsUrl(place)}` : "";
   return {
     id: b.id,
     start: b.start_time,
     end: b.end_time,
     title: `${sessionName} - ${playerName} (JJ Private Training)`,
-    description: `${sessionName} with JJ Private Training, Co. for ${playerName}.\nReschedule or cancel: ${manage}`,
+    description: `${sessionName} with JJ Private Training, Co. for ${playerName}.${where}\nReschedule or cancel: ${manage}`,
+    location: place ? placeText(place) : undefined,
     url: manage,
   };
 }

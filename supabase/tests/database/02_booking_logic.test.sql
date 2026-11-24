@@ -416,5 +416,55 @@ select is((select price_cents from public.admin_create_booking('a0000000-0000-40
    order by slot_start desc limit 1), false, false, null, 4)), 36000,
   'coach-created 4-hour booking (cash/Venmo) is priced at 4 x $90');
 
+-- =========================================================================
+-- Pay cash in person (client books now, coach marks paid later)
+-- =========================================================================
+create or replace function pg_temp.next_cash_slot() returns timestamptz language sql as $$
+  select slot_start from public.get_available_slots('c0000000-0000-4000-8000-000000000001',
+    (now() at time zone 'America/New_York')::date + 19, (now() at time zone 'America/New_York')::date + 24)
+  order by slot_start limit 1
+$$;
+
+create temp table cash1 as
+select * from public.book_with_cash('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003',
+  'c0000000-0000-4000-8000-000000000001', pg_temp.next_cash_slot(), '  bring cones  ');
+grant select on cash1 to authenticated;  -- read while impersonating the coach below
+select is((select status::text || '/' || paid_with::text || '/' || payment_status::text from cash1), 'booked/manual/unpaid',
+  'cash booking is confirmed right away, unpaid, paid_with manual');
+select is((select price_cents from cash1), 9000, 'cash booking records the $90 owed');
+select is((select parent_note from cash1), 'bring cones', 'cash booking keeps the trimmed note');
+
+select throws_ok($$ select public.book_with_cash('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000001',
+  'c0000000-0000-4000-8000-000000000001', pg_temp.next_cash_slot()) $$,
+  'P0001', 'That player is not on your account.', 'cash booking: cannot book another family''s player');
+
+select lives_ok($$ select public.book_with_cash('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003',
+  'c0000000-0000-4000-8000-000000000001', pg_temp.next_cash_slot()) $$, 'second cash booking ok');
+select lives_ok($$ select public.book_with_cash('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003',
+  'c0000000-0000-4000-8000-000000000001', pg_temp.next_cash_slot()) $$, 'third cash booking ok');
+select throws_ok($$ select public.book_with_cash('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003',
+  'c0000000-0000-4000-8000-000000000001', pg_temp.next_cash_slot()) $$,
+  'P0001', 'You already have 3 upcoming sessions to pay in person. Please pay by card or use a package for this one.',
+  'max 3 upcoming unpaid cash bookings per client');
+
+-- Once the coach marks one paid, the client can book another.
+select pg_temp.act_as('a0000000-0000-4000-8000-000000000001');
+select lives_ok($$ select public.admin_set_booking_status((select id from cash1), null, 'paid') $$, 'coach marks the cash booking paid');
+select pg_temp.reset_role();
+select lives_ok($$ select public.book_with_cash('a0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000003',
+  'c0000000-0000-4000-8000-000000000001', pg_temp.next_cash_slot()) $$, 'paid cash bookings don''t count toward the limit');
+
+update public.app_settings set allow_cash_payments = false where id = 1;
+select throws_ok($$ select public.book_with_cash('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001',
+  'c0000000-0000-4000-8000-000000000001', pg_temp.next_cash_slot()) $$,
+  'P0001', 'Paying cash in person is not available right now. Please pay by card.', 'cash option can be switched off in settings');
+update public.app_settings set allow_cash_payments = true where id = 1;
+
+select pg_temp.act_as('a0000000-0000-4000-8000-000000000002');
+select throws_ok($$ select public.book_with_cash('a0000000-0000-4000-8000-000000000002', 'b0000000-0000-4000-8000-000000000001',
+  'c0000000-0000-4000-8000-000000000001', now() + interval '20 days') $$,
+  '42501', null, 'browsers cannot call book_with_cash directly');
+select pg_temp.reset_role();
+
 select * from finish();
 rollback;

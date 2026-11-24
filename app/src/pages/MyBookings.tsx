@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import { AddToCalendar } from "../components/AddToCalendar";
+import { LocationLine } from "../components/LocationLine";
+import { placeFromSettings } from "../lib/location";
 import { PaymentBadge, StatusBadge } from "../components/badges";
 import { SlotPicker } from "../components/SlotPicker";
 import { Alert, Badge, Button, buttonClasses, Card, Empty, Loading, Modal, PageHeader, Segmented, Textarea, useToast } from "../components/ui";
@@ -41,6 +43,7 @@ export default function MyBookings() {
     <>
       <PageHeader
         title="My bookings"
+        subtitle={<LocationLine place={placeFromSettings(settings)} className="mt-1" />}
         actions={<Link to="/book" className={buttonClasses()}>+ Book a session</Link>}
       />
       <Segmented
@@ -139,6 +142,8 @@ function CancelModal({ booking, windowHours, refundMode, onClose, onDone }: {
   const inside = hoursUntil(booking.start_time) < windowHours;
   const outcome = pending
     ? "This releases the time you were holding. You haven't been charged."
+    : inside && booking.paid_with === "manual"
+    ? `This is within ${windowHours} hours of the session, so it counts as a late cancellation. The coach will be notified.`
     : inside
     ? `This is within ${windowHours} hours of the session, so it will be forfeited and ${booking.paid_with === "package" ? "the package credit won't be returned" : "the payment won't be refunded"}.`
     : booking.paid_with === "package"

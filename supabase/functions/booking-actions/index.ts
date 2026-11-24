@@ -6,6 +6,8 @@
 //
 //   { "action": "book_with_package", "session_type_id", "player_id", "start_time", "hours"?, "parent_note"? }
 //     hours (default 1) uses one package credit per hour.
+//   { "action": "book_with_cash", "session_type_id", "player_id", "start_time", "hours"?, "parent_note"? }
+//     booked now, paid in cash at the session (paid_with 'manual', unpaid until the coach marks it paid).
 //   { "action": "cancel",     "booking_id", "reason"? }
 //   { "action": "reschedule", "booking_id", "new_start_time" }
 //   coach only:
@@ -63,6 +65,21 @@ Deno.serve(async (req) => {
       // ---------------------------------------------------------------------
       case "book_with_package": {
         const { data: booking, error } = await admin.rpc("book_with_package", {
+          p_actor: caller.user.id,
+          p_player_id: requireUuid(body.player_id, "player_id"),
+          p_session_type_id: requireUuid(body.session_type_id, "session_type_id"),
+          p_start: requireDate(body.start_time, "start_time"),
+          p_parent_note: cleanText(body.parent_note, 500),
+          p_hours: optionalHours(body.hours),
+        });
+        if (error) throw dbError(error);
+        await notifyBookingConfirmed(admin, booking.id);
+        return json({ booking }, 200, cors);
+      }
+
+      // ---------------------------------------------------------------------
+      case "book_with_cash": {
+        const { data: booking, error } = await admin.rpc("book_with_cash", {
           p_actor: caller.user.id,
           p_player_id: requireUuid(body.player_id, "player_id"),
           p_session_type_id: requireUuid(body.session_type_id, "session_type_id"),

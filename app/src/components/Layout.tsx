@@ -136,6 +136,22 @@ function Footer() {
   );
 }
 
+/** One-line footer for logged-in app pages (the full website footer is for visitors). */
+function CompactFooter() {
+  return (
+    <footer className="border-t border-line">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-center text-sm text-subtle sm:flex-row sm:px-6 sm:text-left lg:px-8">
+        <p>&copy; {new Date().getFullYear()} JJ Private Training, Co.</p>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <a href={`mailto:${CONTACT_EMAIL}`} className="transition-colors hover:text-brand">{CONTACT_EMAIL}</a>
+          <a href={`tel:${CONTACT_PHONE.tel}`} className="transition-colors hover:text-brand">{CONTACT_PHONE.display}</a>
+          <a href={SITE_URL} className="transition-colors hover:text-brand">Website</a>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 const LOG_OUT_CLASS = "rounded-lg px-3 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger-soft";
 
 export function Layout() {
@@ -149,7 +165,7 @@ export function Layout() {
     ? isCoach
       ? [
         { to: "/admin", label: "Dashboard" },
-        { to: "/book", label: "Calendar" },
+        { to: "/book", label: "Client booking page" },
       ]
       : [
         { to: "/book", label: "Book" },
@@ -232,7 +248,7 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <Footer />
+      {session ? <CompactFooter /> : <Footer />}
     </div>
   );
 }

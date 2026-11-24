@@ -1,8 +1,9 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Alert, Button, Card, Field, Input, PageHeader, Select, useToast } from "../../components/ui";
+import { Alert, Button, Card, Checkbox, Field, Input, PageHeader, Select, useToast } from "../../components/ui";
 import { errorMessage, unwrap } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { supabase } from "../../lib/supabase";
+import { mapsUrl } from "../../lib/location";
 import type { AppSettings } from "../../lib/types";
 
 const ZONES = ["America/New_York", "America/Chicago", "America/Denver", "America/Phoenix", "America/Los_Angeles"];
@@ -46,6 +47,24 @@ export default function Settings() {
           </div>
         </Card>
         <Card className="space-y-4">
+          <h2 className="text-lg font-semibold text-fg">Training location</h2>
+          <p className="text-sm text-muted">Shown on the booking pages, in confirmation and reminder emails, and in the calendar file, with a Google Maps directions link.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Place" hint="Leave blank to hide the location everywhere.">
+              {(id) => <Input id={id} maxLength={120} value={f.training_location_name} placeholder="e.g. Cherry Street Park" onChange={(e) => setF({ ...f, training_location_name: e.target.value })} />}
+            </Field>
+            <Field label="Address or town" hint="Used for the directions link.">
+              {(id) => <Input id={id} maxLength={200} value={f.training_location_address} placeholder="e.g. 123 Cherry St, Media, PA 19063" onChange={(e) => setF({ ...f, training_location_address: e.target.value })} />}
+            </Field>
+          </div>
+          {f.training_location_name.trim() && (
+            <a className="inline-block text-sm font-semibold text-brand hover:underline" target="_blank" rel="noopener"
+              href={mapsUrl({ name: f.training_location_name.trim(), address: f.training_location_address.trim() })}>
+              Check it on Google Maps →
+            </a>
+          )}
+        </Card>
+        <Card className="space-y-4">
           <h2 className="text-lg font-semibold text-fg">Booking</h2>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Start times every (min)">{(id) => <Input id={id} type="number" min={5} max={240} step={5} value={f.slot_interval_minutes} onChange={num("slot_interval_minutes")} />}</Field>
@@ -73,6 +92,14 @@ export default function Settings() {
             </Field>
             <Field label="Cancellation credits expire after (days)" hint="Blank = never">{(id) => <Input id={id} type="number" min={1} value={f.credit_validity_days ?? ""} onChange={num("credit_validity_days")} />}</Field>
           </div>
+        </Card>
+        <Card className="space-y-4">
+          <h2 className="text-lg font-semibold text-fg">Payments</h2>
+          <Checkbox
+            checked={f.allow_cash_payments}
+            onChange={(e) => setF({ ...f, allow_cash_payments: e.target.checked })}
+            label="Let clients choose “Pay cash in person” when booking (booked as unpaid; mark paid on the dashboard once collected)"
+          />
         </Card>
         <Button type="submit" size="lg" loading={busy}>Save settings</Button>
       </form>

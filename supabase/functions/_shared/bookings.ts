@@ -12,6 +12,7 @@ import {
   type CancelOutcome,
   coachNotice,
   formatWhen,
+  paymentLabel,
 } from "./templates.ts";
 
 export async function loadBookingEmailData(
@@ -49,6 +50,8 @@ export async function loadBookingEmailData(
     timezone: cfg.timezone,
     currency: cfg.currency,
     cancellationWindowHours: cfg.cancellation_window_hours,
+    locationName: cfg.training_location_name,
+    locationAddress: cfg.training_location_address,
   };
 }
 
@@ -71,7 +74,7 @@ export async function notifyBookingConfirmed(admin: Admin, bookingId: string): P
     await sendSafely(
       coachNotice(coach, `New booking: ${d.playerFirstName} - ${formatWhen(d.startTime, d.timezone)}`, [
         ...coachLines(d),
-        `Payment: ${d.paidWith}`,
+        `Payment: ${paymentLabel(d)}${d.paidWith === "manual" ? " - collect at the session, then mark paid" : ""}`,
       ], { label: "Open schedule", url: `${appUrl()}/admin` }),
     );
   }

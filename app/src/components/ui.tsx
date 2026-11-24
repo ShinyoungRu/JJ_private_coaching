@@ -88,7 +88,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
     <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-fg sm:text-4xl">{title}</h1>
-        {subtitle && <p className="mt-2 max-w-3xl text-lg text-muted">{subtitle}</p>}
+        {subtitle && <div className="mt-2 max-w-3xl text-lg text-muted">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </div>
@@ -208,7 +208,7 @@ export function Segmented<V extends string>({ value, onChange, options, classNam
   value: V; onChange: (v: V) => void; options: Array<{ value: V; label: ReactNode }>; className?: string;
 }) {
   return (
-    <div className={cx("inline-flex flex-wrap rounded-xl border border-line bg-panel-2 p-1", className)} role="tablist">
+    <div className={cx("inline-flex max-w-full overflow-x-auto rounded-xl border border-line bg-panel-2 p-1", className)} role="tablist">
       {options.map((o) => (
         <button
           key={o.value}
@@ -217,7 +217,7 @@ export function Segmented<V extends string>({ value, onChange, options, classNam
           aria-selected={value === o.value}
           onClick={() => onChange(o.value)}
           className={cx(
-            "rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors",
+            "shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-colors sm:px-3.5",
             value === o.value ? "bg-panel text-brand shadow-sm" : "text-muted hover:text-fg",
           )}
         >

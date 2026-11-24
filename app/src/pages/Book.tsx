@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { AddToCalendar } from "../components/AddToCalendar";
+import { LocationLine } from "../components/LocationLine";
 import { PlayerFormModal } from "../components/PlayerForm";
 import { PageHero } from "../components/Layout";
 import { PublicBook } from "../components/PublicBook";
@@ -9,6 +10,7 @@ import { Alert, Button, buttonClasses, Card, cx, Loading, PageHeader, SectionTit
 import { ApiError, errorMessage, invoke, listMyPlayers, unwrap } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { fmtLongDateTime, fmtMoney, fmtTime, hoursUntil, plural } from "../lib/format";
+import { placeFromSettings } from "../lib/location";
 import { supabase } from "../lib/supabase";
 import type { Booking, PackagePurchase, Player, SessionType, Slot } from "../lib/types";
 import { useLoad } from "../lib/useLoad";
@@ -53,7 +55,7 @@ function BookingFlow() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [slot, setSlot] = useState<Slot | null>(null);
   const [hours, setHours] = useState(1);
-  const [payWith, setPayWith] = useState<"package" | "card">("card");
+  const [payWith, setPayWith] = useState<"package" | "card" | "cash">("card");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +98,7 @@ function BookingFlow() {
     [credits.data, type, slot, hours],
   );
   const usableCount = usable.reduce((n, c) => n + c.sessions_remaining, 0);
+  const place = placeFromSettings(settings);
 
   useEffect(() => setPayWith(usableCount > 0 ? "package" : "card"), [usableCount]);
   useEffect(() => {
@@ -122,6 +125,11 @@ function BookingFlow() {
         });
         setBooked(res.booking);
         credits.reload();
+      } else if (payWith === "cash") {
+        const res = await invoke<{ booking: Booking }>("booking-actions", {
+          action: "book_with_cash", session_type_id: type.id, player_id: player.id, start_time: slot.slot_start, hours, parent_note: note,
+        });
+        setBooked(res.booking);
       } else {
         const res = await invoke<{ url: string }>("stripe-checkout", {
           kind: "session", session_type_id: type.id, player_id: player.id, start_time: slot.slot_start, hours, parent_note: note,
@@ -153,7 +161,13 @@ function BookingFlow() {
           <h1 className="mt-4 text-2xl font-bold text-fg">You're booked!</h1>
           <p className="mt-2 text-fg-2">{player.first_name} · {type.name}</p>
           <p className="mt-1 font-semibold text-fg">{fmtLongDateTime(booked.start_time, tz)}</p>
-          <p className="mt-3 text-sm text-muted">A confirmation email is on its way. Paid with a package credit.</p>
+          <LocationLine place={place} className="mt-2 justify-center" />
+          <p className="mt-3 text-sm text-muted">
+            A confirmation email is on its way.{" "}
+            {booked.paid_with === "manual"
+              ? `Please bring ${fmtMoney(booked.price_cents ?? 0, settings?.currency)} in cash to the session.`
+              : "Paid with a package credit."}
+          </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <AddToCalendar booking={booked} sessionName={type.name} playerName={player.first_name} tz={tz} />
             <Link to="/bookings" className={buttonClasses()}>View my bookings</Link>
@@ -168,7 +182,10 @@ function BookingFlow() {
 
   return (
     <>
-      <PageHeader title="Book a session" subtitle="Pick a session type, the player, and a time that works." />
+      <PageHeader
+        title="Book a session"
+        subtitle={<>Pick a session type, the player, and a time that works.<LocationLine place={place} className="mt-2" /></>}
+      />
 
       {isCoach && (
         <Alert className="mb-6">
@@ -259,6 +276,7 @@ function BookingFlow() {
                 <div className="text-sm text-muted">{player.first_name} · {type.name} · {plural(hours, "hour")}</div>
                 <div className="text-xl font-bold text-fg">{fmtLongDateTime(slot.slot_start, tz)}</div>
                 <div className="text-sm text-muted">until {fmtTime(slot.slot_end, tz)}</div>
+                <LocationLine place={place} className="mt-2" />
               </div>
 
               <fieldset className="space-y-2">
@@ -271,6 +289,11 @@ function BookingFlow() {
                 <PayOption checked={payWith === "card"} onChange={() => setPayWith("card")}
                   title={`Pay ${fmtMoney(type.price_cents * hours, settings?.currency)} by card`}
                   detail={hours > 1 ? `${fmtMoney(type.price_cents, settings?.currency)} x ${hours} hours · secure checkout with Stripe` : "Secure checkout with Stripe"} />
+                {settings?.allow_cash_payments && (
+                  <PayOption checked={payWith === "cash"} onChange={() => setPayWith("cash")}
+                    title={`Pay ${fmtMoney(type.price_cents * hours, settings?.currency)} cash in person`}
+                    detail="Your spot is booked now. Pay the coach at the session." />
+                )}
                 {usableCount === 0 && (
                   <p className="text-xs text-subtle">Training often? <Link to="/packages" className="text-brand hover:underline">Packages</Link> save money per session.</p>
                 )}
@@ -288,7 +311,7 @@ function BookingFlow() {
 
               {error && <Alert tone="error">{error}</Alert>}
               <Button size="lg" className="w-full sm:w-auto" loading={submitting} onClick={confirm}>
-                {payWith === "package" ? "Book with credit" : "Continue to payment"}
+                {payWith === "package" ? "Book with credit" : payWith === "cash" ? "Book, pay in person" : "Continue to payment"}
               </Button>
             </Card>
           </section>

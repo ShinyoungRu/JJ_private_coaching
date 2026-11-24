@@ -16,15 +16,17 @@ const TABS = [
 export default function AdminLayout() {
   return (
     <div>
-      <nav className="-mx-4 mb-8 overflow-x-auto px-4 sm:mx-0 sm:px-0" aria-label="Coach">
-        <div className="flex w-max gap-1 rounded-xl border border-line bg-panel-2 p-1">
+      <nav className="mb-8" aria-label="Coach">
+        {/* 4 x 2 grid on phones so every tab stays visible; one row from sm up. */}
+        <div className="grid grid-cols-4 gap-1 rounded-xl border border-line bg-panel-2 p-1 sm:flex sm:w-max">
+
           {TABS.map((t) => (
             <NavLink
               key={t.to}
               to={t.to}
               end={t.end}
               className={({ isActive }) =>
-                cx("whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors",
+                cx("whitespace-nowrap rounded-lg px-1 py-2 text-center text-sm font-semibold transition-colors sm:px-3.5",
                   isActive ? "bg-panel text-brand shadow-sm" : "text-muted hover:text-fg")}
             >
               {t.label}

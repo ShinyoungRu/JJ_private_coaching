@@ -132,6 +132,41 @@ export interface BookingEmailData {
   timezone: string;
   currency: string;
   cancellationWindowHours: number;
+  /** Training location (app_settings); blank name = not shown. */
+  locationName?: string;
+  locationAddress?: string;
+}
+
+type Place = { locationName?: string; locationAddress?: string };
+
+/** "Cherry Street Park, Upper Providence Township, Media, PA 19063", or null when no location is set. */
+export function locationText(d: Place): string | null {
+  const name = (d.locationName || "").trim();
+  if (!name) return null;
+  const addr = (d.locationAddress || "").trim();
+  return addr ? `${name}, ${addr}` : name;
+}
+
+export function mapsUrl(d: Place): string | null {
+  const q = locationText(d);
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
+}
+
+function whereRow(d: Place): Array<[string, string]> {
+  const where = locationText(d);
+  return where ? [["Where", where]] : [];
+}
+
+function directionsHtml(d: Place): string {
+  const url = mapsUrl(d);
+  return url
+    ? `<p style="margin:8px 0 0;font-size:14px"><a href="${escapeHtml(url)}" style="color:${BRAND.primary};font-weight:600">Get directions &rarr;</a></p>`
+    : "";
+}
+
+function directionsText(d: Place): string {
+  const url = mapsUrl(d);
+  return url ? `\nDirections: ${url}` : "";
 }
 
 function greeting(name: string | null): string {
@@ -139,10 +174,10 @@ function greeting(name: string | null): string {
   return first ? `Hi ${first},` : "Hi,";
 }
 
-function paymentLabel(d: BookingEmailData): string {
+export function paymentLabel(d: Pick<BookingEmailData, "paidWith" | "priceCents" | "currency">): string {
   if (d.paidWith === "package") return "Package credit";
   if (d.paidWith === "stripe") return d.priceCents != null ? `Paid ${formatMoney(d.priceCents, d.currency)} by card` : "Paid by card";
-  return "Arranged with coach";
+  return d.priceCents ? `${formatMoney(d.priceCents, d.currency)} in person (cash)` : "Arranged with coach";
 }
 
 function bookingRows(d: BookingEmailData): Array<[string, string]> {
@@ -151,6 +186,7 @@ function bookingRows(d: BookingEmailData): Array<[string, string]> {
     ["Session", d.sessionTypeName],
     ["When", formatWhen(d.startTime, d.timezone)],
     ["Ends", formatTime(d.endTime, d.timezone)],
+    ...whereRow(d),
     ["Payment", paymentLabel(d)],
   ];
 }
@@ -166,11 +202,11 @@ export function bookingConfirmedEmail(d: BookingEmailData): EmailMessage {
       heading: "Your session is booked",
       bodyHtml: `<p style="margin:0 0 16px">${escapeHtml(greeting(d.parentName))}</p>
         <p style="margin:0 0 16px">You're all set. Here are the details:</p>
-        ${detailsTable(rows)}
+        ${detailsTable(rows)}${directionsHtml(d)}
         <p style="margin:16px 0 0;color:${BRAND.muted};font-size:13px">${escapeHtml(policy)}</p>`,
       cta: { label: "View my bookings", url: `${appUrl()}/bookings` },
     }),
-    text: `${greeting(d.parentName)}\n\nYour session is booked.\n\n${detailsText(rows)}\n\n${policy}\n\nManage bookings: ${appUrl()}/bookings`,
+    text: `${greeting(d.parentName)}\n\nYour session is booked.\n\n${detailsText(rows)}${directionsText(d)}\n\n${policy}\n\nManage bookings: ${appUrl()}/bookings`,
   };
 }
 
@@ -191,7 +227,7 @@ export function bookingCancelledEmail(d: BookingEmailData, outcome: CancelOutcom
     forfeited: `This cancellation was within ${d.cancellationWindowHours} hours of the session, so per the cancellation policy the session is forfeited.`,
     none: "",
   };
-  const rows = bookingRows(d).filter(([k]) => k !== "Payment");
+  const rows = bookingRows(d).filter(([k]) => k !== "Payment" && k !== "Where");
   const lead = byCoach
     ? "Unfortunately we had to cancel the following session. Sorry for the inconvenience!"
     : "Your session has been cancelled.";
@@ -218,6 +254,7 @@ export function bookingRescheduledEmail(d: BookingEmailData, oldStart: string): 
     ["Session", d.sessionTypeName],
     ["New time", formatWhen(d.startTime, d.timezone)],
     ["Previous time", formatWhen(oldStart, d.timezone)],
+    ...whereRow(d),
   ];
   return {
     to: d.parentEmail,
@@ -225,10 +262,10 @@ export function bookingRescheduledEmail(d: BookingEmailData, oldStart: string): 
     html: layout({
       heading: "Session rescheduled",
       bodyHtml: `<p style="margin:0 0 16px">${escapeHtml(greeting(d.parentName))}</p>
-        <p style="margin:0 0 16px">Your session has a new time:</p>${detailsTable(rows)}`,
+        <p style="margin:0 0 16px">Your session has a new time:</p>${detailsTable(rows)}${directionsHtml(d)}`,
       cta: { label: "View my bookings", url: `${appUrl()}/bookings` },
     }),
-    text: `${greeting(d.parentName)}\n\nYour session has a new time.\n\n${detailsText(rows)}\n\n${appUrl()}/bookings`,
+    text: `${greeting(d.parentName)}\n\nYour session has a new time.\n\n${detailsText(rows)}${directionsText(d)}\n\n${appUrl()}/bookings`,
   };
 }
 
@@ -240,12 +277,15 @@ export function reminderEmail(d: {
   startTime: string;
   endTime: string;
   timezone: string;
+  locationName?: string;
+  locationAddress?: string;
 }): EmailMessage {
   const rows: Array<[string, string]> = [
     ["Player", d.playerFirstName],
     ["Session", d.sessionTypeName],
     ["When", formatWhen(d.startTime, d.timezone)],
     ["Ends", formatTime(d.endTime, d.timezone)],
+    ...whereRow(d),
   ];
   const tips = "Bring a ball, water, shin guards and cleats. See you on the field!";
   return {
@@ -255,16 +295,16 @@ export function reminderEmail(d: {
       heading: "Session reminder",
       bodyHtml: `<p style="margin:0 0 16px">${escapeHtml(greeting(d.parentName))}</p>
         <p style="margin:0 0 16px">Just a reminder about the upcoming session:</p>
-        ${detailsTable(rows)}
+        ${detailsTable(rows)}${directionsHtml(d)}
         <p style="margin:16px 0 0">${escapeHtml(tips)}</p>`,
       cta: { label: "View or manage booking", url: `${appUrl()}/bookings` },
     }),
-    text: `${greeting(d.parentName)}\n\nReminder about the upcoming session:\n\n${detailsText(rows)}\n\n${tips}\n\n${appUrl()}/bookings`,
+    text: `${greeting(d.parentName)}\n\nReminder about the upcoming session:\n\n${detailsText(rows)}${directionsText(d)}\n\n${tips}\n\n${appUrl()}/bookings`,
   };
 }
 
 export function paidButSlotTakenEmail(d: BookingEmailData): EmailMessage {
-  const rows = bookingRows(d).filter(([k]) => k !== "Payment");
+  const rows = bookingRows(d).filter(([k]) => k !== "Payment" && k !== "Where");
   const msg = "Your payment went through, but the checkout took longer than the slot could be held and the time was booked by someone else. " +
     "We've refunded you in full automatically. Sorry about that! Please pick another time.";
   return {

@@ -5,7 +5,7 @@
 import { adminClient, loadSettings } from "../_shared/clients.ts";
 import { appUrl, publicSiteOrigins } from "../_shared/env.ts";
 import { corsHeaders, errorResponse, HttpError, json } from "../_shared/http.ts";
-import { formatMoney } from "../_shared/templates.ts";
+import { formatMoney, locationText, mapsUrl } from "../_shared/templates.ts";
 
 Deno.serve(async (req) => {
   const cors = corsHeaders(req, publicSiteOrigins());
@@ -34,8 +34,13 @@ Deno.serve(async (req) => {
 
     const typeNames = new Map((types.data ?? []).map((t) => [t.id, t.name]));
 
+    const place = { locationName: settings.training_location_name, locationAddress: settings.training_location_address };
     return json({
       currency: settings.currency,
+      // Where sessions are held (null when the coach hasn't set one).
+      location: locationText(place)
+        ? { name: settings.training_location_name.trim(), address: settings.training_location_address.trim(), maps_url: mapsUrl(place) }
+        : null,
       session_types: (types.data ?? []).map((t) => ({
         ...t,
         price_display: formatMoney(t.price_cents, settings.currency),

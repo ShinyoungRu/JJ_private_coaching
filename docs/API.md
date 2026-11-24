@@ -120,6 +120,16 @@ const { data, error } = await supabase.functions.invoke("booking-actions", {
 // data.booking
 ```
 
+**Pay cash in person (instant, unpaid):** show only when `app_settings.allow_cash_payments` is true.
+```js
+const { data, error } = await supabase.functions.invoke("booking-actions", {
+  body: { action: "book_with_cash", session_type_id, player_id, start_time: slot.slot_start, hours, parent_note },
+});
+// data.booking: status 'booked', paid_with 'manual', payment_status 'unpaid', price_cents = hourly price x hours.
+// The coach marks it paid with admin_set_booking_status(booking_id, null, 'paid').
+// Errors: cash_disabled, too_many_unpaid (max 3 upcoming unpaid cash bookings per client), plus the usual slot errors.
+```
+
 **Pay by card:**
 ```js
 const { data, error } = await supabase.functions.invoke("stripe-checkout", {

@@ -94,12 +94,17 @@ export interface AppSettings {
   cancellation_window_hours: number;
   reminder_hours_before: number;
   payment_hold_minutes: number;
+  training_location_name: string;
+  training_location_address: string;
 }
 
 export async function loadSettings(admin: Admin): Promise<AppSettings> {
   const { data, error } = await admin
     .from("app_settings")
-    .select("business_name, timezone, currency, cancellation_window_hours, reminder_hours_before, payment_hold_minutes")
+    .select(
+      "business_name, timezone, currency, cancellation_window_hours, reminder_hours_before, payment_hold_minutes, " +
+        "training_location_name, training_location_address",
+    )
     .eq("id", 1)
     .single();
   if (error || !data) throw new Error(`Could not load app_settings: ${error?.message}`);

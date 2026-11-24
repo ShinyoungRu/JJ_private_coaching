@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { AddToCalendar } from "../components/AddToCalendar";
+import { LocationLine } from "../components/LocationLine";
+import { placeFromSettings } from "../lib/location";
 import { buttonClasses, Card, Spinner, SuccessMark } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { fmtLongDateTime } from "../lib/format";
@@ -12,7 +14,7 @@ type State = "checking" | "confirmed" | "slow" | "missing";
 export default function BookingSuccess() {
   const [params] = useSearchParams();
   const sessionId = params.get("session_id");
-  const { tz } = useAuth();
+  const { tz, settings } = useAuth();
   const [state, setState] = useState<State>(sessionId ? "checking" : "missing");
   const [detail, setDetail] = useState<{ id: string; start_time: string; end_time: string; player: string; type: string } | null>(null);
 
@@ -59,6 +61,7 @@ export default function BookingSuccess() {
             <h1 className="mt-4 text-2xl font-bold text-fg">Payment received. You're booked!</h1>
             <p className="mt-2 text-fg-2">{detail.player} · {detail.type}</p>
             <p className="mt-1 font-semibold text-fg">{fmtLongDateTime(detail.start_time, tz)}</p>
+            <LocationLine place={placeFromSettings(settings)} className="mt-2 justify-center" />
             <p className="mt-3 text-sm text-muted">A confirmation email is on its way.</p>
           </>
         )}
